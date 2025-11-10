@@ -11,8 +11,8 @@ useHead({
   }
 })
 
-const title = 'Addis Tech Jobs'
-const description = 'A production-ready starter template powered by Nuxt UI. Build beautiful, accessible, and performant applications in minutes, not hours.'
+const title = 'Addis Tech Jobs | Trusted tech staffing and recruiting partner.'
+const description = 'Trusted staffing and recruiting partner exclusively for tech industries through top-tier talent acquisition.'
 
 useSeoMeta({
   title,

@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   pinia: {
     storesDirs: ['./stores/**'],
   },
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css','@tailwindcss/typography'],
   plugins:["~/plugins/supabase.ts"],
   runtimeConfig: {
     public: {

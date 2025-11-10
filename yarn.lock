@@ -1788,6 +1788,12 @@
     postcss "^8.4.41"
     tailwindcss "4.1.16"
 
+"@tailwindcss/typography@tailwindcss/typography":
+  version "0.5.19"
+  resolved "https://codeload.github.com/tailwindcss/typography/tar.gz/abf85cc6e1b4f9b914b0f66453e5a97a9899a15c"
+  dependencies:
+    postcss-selector-parser "6.0.10"
+
 "@tailwindcss/vite@^4.1.16":
   version "4.1.16"
   resolved "https://registry.yarnpkg.com/@tailwindcss/vite/-/vite-4.1.16.tgz#bf6b5a58f932feeb1131720f8e15368f1a0ad17c"
@@ -3932,6 +3938,11 @@ magicast@^0.5.0:
     "@babel/types" "^7.28.5"
     source-map-js "^1.2.1"
 
+marked@^17.0.0:
+  version "17.0.0"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-17.0.0.tgz#62ae3f2ea8346025ae24a24ad4b78982655ef4e3"
+  integrity sha512-KkDYEWEEiYJw/KC+DVm1zzlpMQSMIu6YRltkcCvwheCp8HWPXCk9JwOmHJKBlGfzcpzcIt6x3sMnTsRm/51oDg==
+
 mdn-data@2.0.28:
   version "2.0.28"
   resolved "https://registry.yarnpkg.com/mdn-data/-/mdn-data-2.0.28.tgz#5ec48e7bef120654539069e1ae4ddc81ca490eba"
@@ -4762,6 +4773,14 @@ postcss-reduce-transforms@^7.0.1:
   integrity sha512-MhyEbfrm+Mlp/36hvZ9mT9DaO7dbncU0CvWI8V93LRkY6IYlu38OPg3FObnuKTUxJ4qA8HpurdQOo5CyqqO76g==
   dependencies:
     postcss-value-parser "^4.2.0"
+
+postcss-selector-parser@6.0.10:
+  version "6.0.10"
+  resolved "https://registry.yarnpkg.com/postcss-selector-parser/-/postcss-selector-parser-6.0.10.tgz#79b61e2c0d1bfc2602d549e11d0876256f8df88d"
+  integrity sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==
+  dependencies:
+    cssesc "^3.0.0"
+    util-deprecate "^1.0.2"
 
 postcss-selector-parser@^7.0.0, postcss-selector-parser@^7.1.0:
   version "7.1.0"

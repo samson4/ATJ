@@ -1,32 +1,38 @@
 <template>
   <template>
-  <UBlogPosts orientation="vertical" :posts="posts" />
+  <UBlogPosts orientation="vertical" :posts="companies" />
 </template>
 
 
 </template>
 
 <script setup lang="ts">
-const posts = ref([
-  {
-    title: 'Nuxt Icon v1',
-    description: 'Discover Nuxt Icon v1!',
-    image: 'https://nuxt.com/assets/blog/nuxt-icon/cover.png',
-    date: '2024-11-25'
-  },
-  {
-    title: 'Nuxt 3.14',
-    description: 'Nuxt 3.14 is out!',
-    image: 'https://nuxt.com/assets/blog/v3.14.png',
-    date: '2024-11-04'
-  },
-  {
-    title: 'Nuxt 3.13',
-    description: 'Nuxt 3.13 is out!',
-    image: 'https://nuxt.com/assets/blog/v3.13.png',
-    date: '2024-08-22'
-  }
+//init
+const { $supabase } = useNuxtApp()
+//data
+const companies = ref([
 ])
+
+//hooks
+onMounted(async()=>{
+ 
+const { data, error } = await $supabase.schema("companies")
+  .from('company')
+  .select(`
+    *
+  `)
+  if(error) throw error
+   companies.value = data.map((d)=>{
+    return {
+      title: d.name,
+      description:d.description,
+      image: 'https://nuxt.com/assets/blog/v3.13.png',
+      date: '2024-08-22',
+      to:`company/${d.id}`
+    }
+  })
+
+})
 </script>
 
 <style>
