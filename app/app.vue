@@ -38,47 +38,11 @@ const isDark = computed({
 })
 </script>
 
-<template>
-  <!-- <UApp>
-    <UHeader>
-      <template #left>
-        <NuxtLink to="/">
-          <AppLogo class="w-auto h-6 shrink-0" />
-        </NuxtLink>
+<template >
 
-        <TemplateMenu />
-      </template>
-
-      <template #right>
-        <UButton to="/auth/signin" color="secondary" variant="outline">Sign In</UButton>
-        
-            <UColorModeSelect />
-      </template>
-    </UHeader> -->
-
-      <NuxtLayout>
+      <NuxtLayout class="bg-indigo-500">
     <NuxtPage />
   </NuxtLayout>
 
-    <!-- <USeparator />
 
-    <UFooter>
-      <template #left>
-        <p class="text-sm text-muted">
-          Built with Nuxt UI • © {{ new Date().getFullYear() }}
-        </p>
-      </template>
-
-      <template #right>
-        <UButton
-          to="https://github.com/nuxt-ui-templates/starter"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
-        />
-      </template>
-    </UFooter>
-  </UApp> -->
 </template>

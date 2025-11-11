@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { marked } from 'marked';
 import JobDetail from '~/components/jobs/JobDetail.vue'
 
 // Define a type for your job object for better TypeScript support
@@ -114,23 +115,13 @@ onMounted(() => {
     </template>
 
     <!-- Card Body -->
-    <div class="h-35">
+    <div class="h-40">
       <h3 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
         {{ job.role }}
       </h3>
-      <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">
-        {{ job.job_description.slice(0, 200) + "..." }}
-      </p>
+      
+      <div v-html="marked.parse(job.job_description.slice(0, 200) + '...')"></div>
 
-      <!-- Dates Section -->
-      <div class="flex flex-row gap-12 text-sm text-gray-500 dark:text-gray-400 mt-4">
-        <p class="flex1">
-          <strong>Posted:</strong> {{ new Date(job.created_at).toLocaleDateString() }}
-        </p>
-        <p >
-          <strong>Deadline:</strong> {{ new Date().toLocaleDateString() }}
-        </p>
-      </div>
     </div>
 
     <!-- Card Footer -->
