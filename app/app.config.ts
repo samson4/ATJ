@@ -27,7 +27,7 @@ export default defineAppConfig({
             root: 'bg-inverted text-inverted'
           },
           outline: {
-            root: 'dark:bg-ehite dark:text-white ring ring-default shadow-xl'
+            root: 'dark:bg-ehite dark:text-white ring ring-default'
           },
           soft: {
             root: 'bg-elevated/50 divide-y divide-default'
