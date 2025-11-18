@@ -1,6 +1,13 @@
 <template>
-  <UCard>
-    <div class="flex gap-4">
+  <UCard @click="selectedJob = job"
+  class="p-4 sm:px-6 text-sm cursor-pointer border-l-2 transition-colors"
+   :class="[
+         
+          selectedJob && selectedJob.id === job.id
+            ? 'border-primary bg-primary/10'
+            : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5'
+        ]">
+    <div    class="flex gap-4">
       <UAvatar icon="i-heroicons-building-office-2" size="lg" />
 
       <div class="flex-1">
@@ -24,18 +31,23 @@
     
     <UButton
       icon="i-heroicons-bookmark"
-      color="gray"
-      variant="ghost"
+      color="neutral"
+      variant="outline"
       class="absolute top-2 right-2"
     />
   </UCard>
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   job: {
     type: Object,
     required: true
   }
 })
+//data
+
+const selectedJob = ref(null)
+//methods
+
 </script>
