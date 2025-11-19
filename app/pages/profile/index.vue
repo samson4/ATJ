@@ -320,18 +320,7 @@ const avatarPreview = ref<string | null>(null);
 const newAvatarFile = ref<File | null>(null);
 
 // Mock user data
-const currentUser = {
-        avatar_url: "https://lh3.googleusercontent.com/a/ACg8ocL6d7ADxW2o-NVq-zpNDdj2ODkFp2A4shgvrT-7RqzXvo1uAw=s96-c",
-        email: "samsonkebede4@gmail.com",
-        email_verified: true,
-        full_name: "samson kebede",
-        iss: "https://accounts.google.com",
-        name: "samson kebede",
-        phone_verified: false,
-        picture: "https://lh3.googleusercontent.com/a/ACg8ocL6d7ADxW2o-NVq-zpNDdj2ODkFp2A4shgvrT-7RqzXvo1uAw=s96-c",
-        provider_id: "103271981617418548609",
-        sub: "103271981617418548609"
-    }
+const currentUser = {}
 
 const state = ref<Schema>({
   name: currentUser.name,
