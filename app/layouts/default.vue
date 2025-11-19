@@ -1,7 +1,8 @@
 <template>
   <UHeader>
     <template #left>
-      <NuxtLink v-if="authUser"  to="/jobs"><AppLogo class="w-auto h-6 shrink-0" />
+      <NuxtLink v-if="authUser" to="/jobs"
+        ><AppLogo class="w-auto h-6 shrink-0" />
       </NuxtLink>
       <NuxtLink v-else to="/">
         <AppLogo class="w-auto h-6 shrink-0" />
@@ -13,14 +14,25 @@
     <template #right>
       <div v-if="authUser">
         <!-- <UButton v-if="authUser" to="/" color="error"  variant="outline">Sign Out</UButton> -->
-        <UDropdownMenu arrow :items="items" item-text="name" :ui="{
-          content: 'w-48',
-        }">
+        <UDropdownMenu
+          arrow
+          :items="items"
+          item-text="name"
+          :ui="{
+            content: 'w-48',
+          }"
+        >
           <UButton icon="i-lucide-menu" color="neutral" variant="outline" />
         </UDropdownMenu>
       </div>
       <div v-else>
-        <UButton @click="signOut" to="/auth/signin" color="secondary" variant="outline">Sign In</UButton>
+        <UButton
+          @click="signOut"
+          to="/auth/signin"
+          color="secondary"
+          variant="outline"
+          >Sign In</UButton
+        >
       </div>
 
       <UColorModeButton />
@@ -33,21 +45,20 @@
   <UFooter>
     <template #default>
       <p class="text-sm text-muted">
-       Addis Tech Jobs • © {{ new Date().getFullYear() }}
+        Addis Tech Jobs • © {{ new Date().getFullYear() }}
       </p>
     </template>
-
-
   </UFooter>
 </template>
 
 <script setup lang="ts">
 //init
+import { useAuthStore } from "~/stores/auth"
 const { $supabase } = useNuxtApp();
 const router = useRouter();
 
 //data
-
+const authStore = useAuthStore()
 const authUser = ref(null);
 const items = ref([
   { label: "Profile", icon: "lucide:user", to: "/profile" },
@@ -66,8 +77,9 @@ onMounted(async () => {
     data: { user },
   } = await $supabase.auth.getUser();
   if (user) {
-   
     authUser.value = user;
+    authStore.user = user
+    console.log("auth",authStore)
   }
 });
 

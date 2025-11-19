@@ -21,22 +21,6 @@ interface Job {
   deadline:string
 }
 
-const overlay = useOverlay()
-
-// DON'T create the modal here anymore
-// const modal = overlay.create(JobDetail) 
-
-// MODIFY the function to accept the 'job'
-async function openModal(job: Job) {
-  // CREATE the modal here, passing the specific job as a prop
-  // This assumes your overlay.create() accepts props as the second argument
-  const modal = overlay.create(JobDetail, {
-    job: job 
-  })
-
-  modal.open()
-}
-
 definePageMeta({ layout: 'default',middleware:"auth" })
 
 const { $supabase } = useNuxtApp()

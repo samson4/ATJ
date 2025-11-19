@@ -1,5 +1,5 @@
 <template>
-  <UCard @click="selectedJob = job"
+  <UCard @click="selectJob(job)"
   class="p-4 sm:px-6 text-sm cursor-pointer border-l-2 transition-colors"
    :class="[
          
@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+import { useJobStore } from "~/stores/job"
 const props = defineProps({
   job: {
     type: Object,
@@ -46,8 +47,19 @@ const props = defineProps({
   }
 })
 //data
+const jobStore = useJobStore()
 
-const selectedJob = ref(null)
+// const selectedJob = jobStore.selectedJob
+
+const selectedJob = computed(() => {
+  return jobStore.selectedJob
+});
+
 //methods
+
+const selectJob = (job)=>{
+  
+  jobStore.selectedJob = job
+}
 
 </script>
