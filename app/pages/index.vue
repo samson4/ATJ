@@ -2,6 +2,8 @@
 definePageMeta({
   layout:"landing",
 })
+
+const { $supabase } = useNuxtApp()
 </script>
 
 
