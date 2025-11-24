@@ -1,7 +1,7 @@
 <template>
   <UHeader>
     <template #left>
-      <NuxtLink v-if="authUser" to="/jobs"
+      <NuxtLink v-if="authUser" to="/"
         ><AppLogo class="w-auto h-6 shrink-0" />
       </NuxtLink>
       <NuxtLink v-else to="/">
@@ -38,7 +38,7 @@
       <UColorModeButton />
     </template>
   </UHeader>
-  <UMain class="m-8 flex flex-1  gap-6">
+  <UMain class="flex flex-col gap-6 mx-12">
     <slot />
   </UMain>
   <USeparator />
@@ -87,7 +87,8 @@ onMounted(async () => {
 
 const signOut = async () => {
   let { error } = await $supabase.auth.signOut();
-
+  authStore.user = {}
+  authStore.authenticated_user = {}
   if (error) throw error;
   router.push("/auth/signin");
 };

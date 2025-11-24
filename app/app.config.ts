@@ -16,10 +16,11 @@ export default defineAppConfig({
     },
     card:{
        slots: {
-        root: 'rounded-lg overflow-hidden bg-white dark:bg-dark-elevated shadow-sm',
-        header: 'p-4 sm:px-6',
-        body: 'p-4 sm:p-6 ',
-        footer: 'p-4 sm:px-6'
+        // white background in light mode, elevated background in dark mode
+        root: 'rounded-lg overflow-y-auto shadow-sm bg-white dark:bg-dark-elevated',
+        header: 'p-4 sm:px-6 bg-white dark:bg-dark-elevated',
+        body: 'p-4 sm:p-6 bg-white dark:bg-dark-elevated',
+        footer: 'p-4 sm:px-6 bg-white dark:bg-dark-elevated'
       },
       variants: {
         variant: {
@@ -43,7 +44,7 @@ export default defineAppConfig({
     },
         dashboardPanel: {
       slots: {
-        root: 'relative flex flex-col min-w-0 min-h-svh lg:not-last:border-e lg:not-last:border-default shrink-0',
+        root: 'relative border-none flex flex-col min-w-0 min-h-svh lg:not-last:border-e lg:not-last:border-default shrink-0',
         body: 'flex flex-col gap-4 sm:gap-6 flex-1 overflow-y-auto p-4 sm:p-6',
         handle: ''
       },

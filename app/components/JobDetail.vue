@@ -11,7 +11,7 @@ const selectedJob = computed(() => {
 </script>
 
 <template>
-  <UCard :ui="{ body: { padding: 'sm:p-6' } }" class="lg:w-[800px]">
+  <UCard :ui="{ body: { padding: 'sm:p-6' } }" class="h-[calc(100vh-10rem)] overflow-y-auto">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
         <UAvatar :src="selectedJob.company_logo" icon="i-heroicons-building-office-2" size="lg" />

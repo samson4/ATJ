@@ -1,86 +1,82 @@
 <script setup lang="ts">
-definePageMeta({
-  layout:"landing",
-})
+import { ref, onMounted } from 'vue'
+import { marked } from 'marked';
 
+import { useJobStore } from "~/stores/job"
 const { $supabase } = useNuxtApp()
+const jobStore = useJobStore()
+// Define a type for your job object for better TypeScript support
+interface Job {
+  id:string;
+  created_at: string;
+  update_at:string;
+  job_description:string;
+  role: string;
+  description: string;
+  company_id: string;
+  workplace:string;
+  company_name:string;
+  company_website:string;
+  company_description:string;
+  company_logo: string;
+  link: string;
+  deadline:string
+}
+
+
+
+const selectedJob = computed(() => {
+  return jobStore.selectedJob
+});
+definePageMeta({ layout: 'default' })
+
+//methods
+const openDetail = ()=>{
+  console.log("open detail called")
+}
+const tabItems = [
+  { label: 'Best Matches' },
+  { label: 'Featured' },
+  { label: 'Most Recent' }
+]
 </script>
 
-
 <template>
-  <div>
-    <!-- <UPageHero
-      title="Nuxt Starter Template"
-      description="A production-ready starter template powered by Nuxt UI. Build beautiful, accessible, and performant applications in minutes, not hours."
-      :links="[{
-        label: 'Get started',
-        to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-        target: '_blank',
-        trailingIcon: 'i-lucide-arrow-right',
-        size: 'xl'
-      }, {
-        label: 'Use this template',
-        to: 'https://github.com/nuxt-ui-templates/starter',
-        target: '_blank',
-        icon: 'i-simple-icons-github',
-        size: 'xl',
-        color: 'neutral',
-        variant: 'subtle'
-      }]"
-    />
-
-    <UPageSection
-      id="features"
-      title="Everything you need to build modern Nuxt apps"
-      description="Start with a solid foundation. This template includes all the essentials for building production-ready applications with Nuxt UI's powerful component system."
-      :features="[{
-        icon: 'i-lucide-rocket',
-        title: 'Production-ready from day one',
-        description: 'Pre-configured with TypeScript, ESLint, Tailwind CSS, and all the best practices. Focus on building features, not setting up tooling.'
-      }, {
-        icon: 'i-lucide-palette',
-        title: 'Beautiful by default',
-        description: 'Leveraging Nuxt UI\'s design system with automatic dark mode, consistent spacing, and polished components that look great out of the box.'
-      }, {
-        icon: 'i-lucide-zap',
-        title: 'Lightning fast',
-        description: 'Optimized for performance with SSR/SSG support, automatic code splitting, and edge-ready deployment. Your users will love the speed.'
-      }, {
-        icon: 'i-lucide-blocks',
-        title: '100+ components included',
-        description: 'Access Nuxt UI\'s comprehensive component library. From forms to navigation, everything is accessible, responsive, and customizable.'
-      }, {
-        icon: 'i-lucide-code-2',
-        title: 'Developer experience first',
-        description: 'Auto-imports, hot module replacement, and TypeScript support. Write less boilerplate and ship more features.'
-      }, {
-        icon: 'i-lucide-shield-check',
-        title: 'Built for scale',
-        description: 'Enterprise-ready architecture with proper error handling, SEO optimization, and security best practices built-in.'
-      }]"
-    />
-
-    <UPageSection>
-      <UPageCTA
-        title="Ready to build your next Nuxt app?"
-        description="Join thousands of developers building with Nuxt and Nuxt UI. Get this template and start shipping today."
-        variant="subtle"
-        :links="[{
-          label: 'Start building',
-          to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-          target: '_blank',
-          trailingIcon: 'i-lucide-arrow-right',
-          color: 'neutral'
-        }, {
-          label: 'View on GitHub',
-          to: 'https://github.com/nuxt-ui-templates/starter',
-          target: '_blank',
-          icon: 'i-simple-icons-github',
-          color: 'neutral',
-          variant: 'outline'
-        }]"
+ 
+    <div
+      style="background-image: url('atj.jpeg'); height: 300px; background-size: cover; background-position: bottom;"
+      class="bg-no-repeat w-full flex justify-center rounded-md "
+    >
+      <UInput
+        size="xl"
+        class="w-full max-w-3xl"
+        icon="i-lucide-search"
+        placeholder="Search jobs."
       />
-    </UPageSection> -->
-   
-  </div>
+    </div>
+    <!-- A basic filter component based on job tag, company name and salary range -->
+     
+    <!-- Dashboard area below the hero -->
+    <div class="w-full flex gap-6 ">
+      <!-- keep the panel non-scrolling so JobCard's internal scroll works independently -->
+      <UDashboardPanel class="h-full overflow-hidden" resizable :min-size="22" :default-size="35" :max-size="40">
+        <JobCard />
+      </UDashboardPanel>
+
+      <!-- Right column: JobDetail or placeholder -->
+      <div class="flex-1">
+        <JobDetail v-if="selectedJob && selectedJob.id" @close="selectedJob = null" />
+        <div v-else class="hidden lg:flex flex-1 items-center justify-center"></div>
+      </div>
+    </div>
+
+    <!-- Mobile slide over -->
+    <ClientOnly>
+      <USlideover v-if="isMobile">
+        <template #content>
+          <JobDetail v-if="selectedJob && selectedJob.id" @close="selectedJob = null" />
+        </template>
+      </USlideover>
+    </ClientOnly>
+
 </template>

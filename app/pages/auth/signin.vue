@@ -59,7 +59,7 @@ let { data, error } = await $supabase.auth.signInWithPassword({
   password: payload.data.password
 })
 if(error) throw error;
-router.push("/jobs")
+router.push("/")
 }
 </script>
 

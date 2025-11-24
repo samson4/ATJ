@@ -1,8 +1,9 @@
 <template>
 
-    <UDashboardPanel class="border-none"  resizable :min-size="22" :default-size="35" :max-size="40">
+    <!-- keep the panel non-scrolling so JobCard's internal scroll works independently -->
+    <UDashboardPanel class="h-full overflow-hidden" resizable :min-size="22" :default-size="35" :max-size="40">
       
-      <JobCard class="overflow-y-auto"   />
+      <JobCard    />
   </UDashboardPanel>
 
    <JobDetail  v-if="selectedJob && selectedJob.id"  @close="selectedJob = null" />
