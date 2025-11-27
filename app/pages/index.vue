@@ -23,7 +23,11 @@ interface Job {
   deadline:string
 }
 
+const filters = ref({})
 
+const handleFilterChange = (newFilters: any) => {
+  filters.value = newFilters
+}
 
 const selectedJob = computed(() => {
   return jobStore.selectedJob
@@ -42,7 +46,7 @@ const tabItems = [
 </script>
 
 <template>
- 
+  <div>
     <div
       style="background-image: url('atj.jpeg'); height: 300px; background-size: cover; background-position: bottom;"
       class="bg-no-repeat w-full flex justify-center rounded-md "
@@ -54,29 +58,47 @@ const tabItems = [
         placeholder="Search jobs."
       />
     </div>
-    <!-- A basic filter component based on job tag, company name and salary range -->
-     
+
+    <!-- Filter Component -->
+   <!-- <div class="my-6 flex justify-center">
+      <div class="w-full max-w-xl">
+        <JobFilter @change="handleFilterChange" />
+      </div>
+    </div> -->
+    
     <!-- Dashboard area below the hero -->
-    <div class="w-full flex gap-6 ">
+    <div class="w-full flex gap-6" :class="{ 'justify-center': !selectedJob?.id }">
       <!-- keep the panel non-scrolling so JobCard's internal scroll works independently -->
-      <UDashboardPanel class="h-full overflow-hidden" resizable :min-size="22" :default-size="35" :max-size="40">
-        <JobCard />
+      <UDashboardPanel
+        class="transition-all duration-500"
+        :resizable="!!selectedJob?.id"
+        :min-size="22"
+        :default-size="35"
+        :max-size="40"
+        :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-[calc(100vh-10rem)] overflow-y-auto']"
+      >
+        <JobCard :filters="filters" />
       </UDashboardPanel>
 
-      <!-- Right column: JobDetail or placeholder -->
-      <div class="flex-1">
-        <JobDetail v-if="selectedJob && selectedJob.id" @close="selectedJob = null" />
-        <div v-else class="hidden lg:flex flex-1 items-center justify-center"></div>
-      </div>
+      <Transition
+        enter-active-class="transition-opacity duration-500"
+        enter-from-class="opacity-0"
+        leave-active-class="transition-opacity duration-500"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="selectedJob && selectedJob.id" class="flex-1">
+          <JobDetail @close="selectedJob = null" />
+        </div>
+      </Transition>
     </div>
 
     <!-- Mobile slide over -->
     <ClientOnly>
-      <USlideover v-if="isMobile">
+      <USlideover v-if="isMobile && selectedJob && selectedJob.id">
         <template #content>
-          <JobDetail v-if="selectedJob && selectedJob.id" @close="selectedJob = null" />
+          <JobDetail @close="selectedJob = null" />
         </template>
       </USlideover>
     </ClientOnly>
-
+  </div>
 </template>

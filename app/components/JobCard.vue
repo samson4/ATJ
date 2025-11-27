@@ -5,7 +5,7 @@
   </div>
 
   <!-- make the list area independently scrollable -->
-  <div v-else class="h-[calc(100vh-10rem)] overflow-y-auto space-y-2">
+  <div v-else class=" space-y-2">
     <UCard
       v-for="job in filteredJobs"
       :key="job.id"
@@ -104,12 +104,17 @@ const filteredJobs = computed(() => {
   const tags = Array.isArray(f.tags) ? f.tags : []
   const minSalary = f.salaryMin
   const maxSalary = f.salaryMax
+  const workplace = f.workplace
 
   return (jobs.value || []).filter((job: any) => {
     // company name filter
     if (company) {
       if (!job.company_name || !job.company_name.toLowerCase().includes(company)) return false
     }
+
+    // workplace filter
+    if (workplace && job.workplace !== workplace) return false
+    
     // tags filter (if any tag selected, require job.tags to include at least one)
     if (tags.length) {
       if (!Array.isArray(job.tags) || !tags.some((t: string) => job.tags.includes(t))) return false

@@ -35,6 +35,11 @@
           <UInput v-model.number="local.salaryMax" type="number" placeholder="Max" size="sm" />
         </div>
       </div>
+
+      <div>
+        <label class="text-sm font-medium">Workplace</label>
+        <URadioGroup v-model="local.workplace" :items="workplaceOptions" class="mt-2" />
+      </div>
     </div>
   </UCard>
 </template>
@@ -43,17 +48,25 @@
 import { watch, reactive } from 'vue'
 
 const emit = defineEmits<{
-  (e: 'change', filters: { companyName?: string; tags: string[]; salaryMin?: number; salaryMax?: number }): void
+  (e: 'change', filters: { companyName?: string; tags: string[]; salaryMin?: number; salaryMax?: number; workplace?: string }): void
 }>()
 
 // basic tag list; adjust or make dynamic later
 const availableTags = ['Frontend', 'Backend', 'DevOps', 'Design', 'Product', 'Fullstack']
+
+const workplaceOptions = [
+  { value: '', label: 'Any' },
+  { value: 'Remote', label: 'Remote' },
+  { value: 'On-site', label: 'On-site' },
+  { value: 'Hybrid', label: 'Hybrid' }
+]
 
 const local = reactive({
   companyName: '',
   tags: [] as string[],
   salaryMin: undefined as number | undefined,
   salaryMax: undefined as number | undefined,
+  workplace: ''
 })
 
 function toggleTag(tag: string) {
@@ -67,6 +80,7 @@ function reset() {
   local.tags = []
   local.salaryMin = undefined
   local.salaryMax = undefined
+  local.workplace = ''
 }
 
 // emit on change
@@ -78,6 +92,7 @@ watch(
       tags: next.tags || [],
       salaryMin: next.salaryMin,
       salaryMax: next.salaryMax,
+      workplace: next.workplace || undefined
     })
   },
   { deep: true }

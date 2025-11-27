@@ -1,20 +1,33 @@
 <template>
-
+  <div class="w-full flex gap-6" :class="{ 'justify-center': !selectedJob?.id }">
     <!-- keep the panel non-scrolling so JobCard's internal scroll works independently -->
-    <UDashboardPanel class="h-full overflow-hidden" resizable :min-size="22" :default-size="35" :max-size="40">
-      
-      <JobCard    />
-  </UDashboardPanel>
+    <UDashboardPanel
+      class="transition-all duration-500"
+      :resizable="!!selectedJob?.id"
+      :min-size="22"
+      :default-size="35"
+      :max-size="40"
+      :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-[calc(100vh-10rem)] overflow-y-auto']"
+    >
+      <JobCard />
+    </UDashboardPanel>
 
-   <JobDetail  v-if="selectedJob && selectedJob.id"  @close="selectedJob = null" />
-  <div v-else class="hidden lg:flex flex-1 items-center justify-center">
-    
+    <Transition
+      enter-active-class="transition-opacity duration-500"
+      enter-from-class="opacity-0"
+      leave-active-class="transition-opacity duration-500"
+      leave-to-class="opacity-0"
+    >
+      <div v-if="selectedJob && selectedJob.id" class="flex-1">
+        <JobDetail @close="selectedJob = null" />
+      </div>
+    </Transition>
   </div>
 
-    <ClientOnly>
-    <USlideover v-if="isMobile">
+  <ClientOnly>
+    <USlideover v-if="isMobile && selectedJob && selectedJob.id">
       <template #content>
-        <JobDetail v-if="selectedJob && selectedJob.id"  @close="selectedJob = null" />
+        <JobDetail @close="selectedJob = null" />
       </template>
     </USlideover>
   </ClientOnly>

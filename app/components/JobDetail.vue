@@ -7,6 +7,18 @@ const jobStore = useJobStore()
 const selectedJob = computed(() => {
   return jobStore.selectedJob
 });
+const applyLink = computed(() => {
+  const link = selectedJob.link;
+  if (!link) return undefined;
+
+  // Check if it's an email and not already a mailto link
+  if (link.includes('@') && !link.startsWith('mailto:')) {
+    return `mailto:${link}`;
+  }
+
+  // Otherwise, return the link as is (e.g., 'https://...' or '/internal-page')
+  return link;
+});
 
 </script>
 
@@ -89,6 +101,13 @@ const selectedJob = computed(() => {
       </UInput>
     </div>
 
-    <UButton block size="lg" class="mt-6"> Submit a Proposal </UButton>
+    <UButton 
+    :to="selectedJob.link && selectedJob.link.includes('@') && !selectedJob.link.startsWith('mailto:') ? `mailto:${selectedJob.link}` : selectedJob.link" 
+    :target="selectedJob.link && !selectedJob.link.startsWith('mailto:') ? '_blank' : undefined"
+     block 
+     size="lg" 
+     class="mt-6"> 
+     Submit a Proposal 
+    </UButton>
   </UCard>
 </template>

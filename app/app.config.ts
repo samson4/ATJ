@@ -18,9 +18,9 @@ export default defineAppConfig({
        slots: {
         // white background in light mode, elevated background in dark mode
         root: 'rounded-lg overflow-y-auto shadow-sm bg-white dark:bg-dark-elevated',
-        header: 'p-4 sm:px-6 bg-white dark:bg-dark-elevated',
-        body: 'p-4 sm:p-6 bg-white dark:bg-dark-elevated',
-        footer: 'p-4 sm:px-6 bg-white dark:bg-dark-elevated'
+        header: 'p-4 sm:px-6',
+        body: 'p-4 sm:p-6 ',
+        footer: 'p-4 sm:px-6 '
       },
       variants: {
         variant: {
