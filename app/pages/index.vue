@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { marked } from 'marked';
-import axios from 'axios';
 import { useJobStore } from "~/stores/job"
 const { $supabase } = useNuxtApp()
 const jobStore = useJobStore()
