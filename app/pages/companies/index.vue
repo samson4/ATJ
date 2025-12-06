@@ -7,7 +7,7 @@
       :min-size="22"
       :default-size="35"
       :max-size="40"
-      :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-[calc(100vh-10rem)] overflow-y-auto']"
+      :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-screen overflow-y-auto']"
     >
       <JobCard />
     </UDashboardPanel>

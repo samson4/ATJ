@@ -2,13 +2,12 @@
   <UHeader>
     <template #left>
       <NuxtLink v-if="authUser" to="/"
-        ><AppLogo class="w-auto h-6 shrink-0" />
+        ><AppLogo class="w-auto h-12 "/>
       </NuxtLink>
       <NuxtLink v-else to="/">
-        <AppLogo class="w-auto h-6 shrink-0" />
+        <AppLogo class="w-auto h-12 " />
       </NuxtLink>
 
-      <TemplateMenu />
     </template>
 
     <template #right>

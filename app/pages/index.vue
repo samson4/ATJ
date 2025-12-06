@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { marked } from 'marked';
-
+import axios from 'axios';
 import { useJobStore } from "~/stores/job"
 const { $supabase } = useNuxtApp()
 const jobStore = useJobStore()
+const searchQuery = ref('')
+const loading = ref(false);
+const filters = ref({});
 // Define a type for your job object for better TypeScript support
 interface Job {
   id:string;
@@ -23,11 +26,6 @@ interface Job {
   deadline:string
 }
 
-const filters = ref({})
-
-const handleFilterChange = (newFilters: any) => {
-  filters.value = newFilters
-}
 
 const selectedJob = computed(() => {
   return jobStore.selectedJob
@@ -43,20 +41,64 @@ const tabItems = [
   { label: 'Featured' },
   { label: 'Most Recent' }
 ]
+const searchJobs = async() => {
+  loading.value = true;
+  jobStore.selectedJob = {};
+  console.log("Search Jobs clicked", searchQuery.value);
+  const { data, error } = await $supabase.schema("jobs")
+      .from('job_with_company_info')
+      .select('*')
+      .or(`job_description.ilike.%${searchQuery.value}%,role.ilike.%${searchQuery.value}%,company_name.ilike.%${searchQuery.value}%`)
+  if (error) {
+    console.error("Error fetching jobs:", error);
+    loading.value = false;
+   
+  } else {
+    jobStore.jobList = data
+    loading.value = false;
+    // You can update your job list here with the fetched data  
+  }
+}
+
 </script>
 
 <template>
   <div>
-    <div
-      style="background-image: url('atj.jpeg'); height: 300px; background-size: cover; background-position: bottom;"
-      class="bg-no-repeat w-full flex justify-center rounded-md "
+   <div
+      style="background-image: url('atj.jpeg');"
+      class="bg-no-repeat bg-cover bg-bottom w-full h-[300px] flex justify-center items-center relative rounded-md overflow-hidden mb-6"
     >
-      <UInput
-        size="xl"
-        class="w-full max-w-3xl"
-        icon="i-lucide-search"
-        placeholder="Search jobs."
-      />
+      <div class="absolute inset-0 bg-black/10"></div>
+      
+      <div class="z-10 w-full max-w-4xl px-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
+          
+          <div class="p-4 md:p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col md:flex-row gap-4 items-center">
+            <UInput
+              v-model="searchQuery"
+              size="xl"
+              class="w-full"
+              icon="i-heroicons-magnifying-glass-20-solid"
+              placeholder="Search for jobs, companies..."
+              :ui="{ rounded: 'rounded-full' }"
+            />
+            <UButton 
+              @click="searchJobs"
+              :loading="loading"
+              loading-icon="i-lucide-loader"
+              size="xl" 
+              color="primary"
+               variant="outline" 
+              class="w-full md:w-auto px-8 rounded-full font-bold whitespace-nowrap"
+            >
+              Find Job
+            </UButton>
+          </div>
+          
+        
+
+        </div>
+      </div>
     </div>
 
     <!-- Filter Component -->
@@ -67,7 +109,7 @@ const tabItems = [
     </div> -->
     
     <!-- Dashboard area below the hero -->
-    <div class="w-full flex gap-6" :class="{ 'justify-center': !selectedJob?.id }">
+    <div class="w-full flex gap-6 my-6" :class="{ 'justify-center': !selectedJob?.id }">
       <!-- keep the panel non-scrolling so JobCard's internal scroll works independently -->
       <UDashboardPanel
         class="transition-all duration-500"
@@ -75,9 +117,9 @@ const tabItems = [
         :min-size="22"
         :default-size="35"
         :max-size="40"
-        :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-[calc(100vh-10rem)] overflow-y-auto']"
+        :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-screen overflow-y-auto']"
       >
-        <JobCard :filters="filters" />
+        <JobCard  :filters="filters"/>
       </UDashboardPanel>
 
       <Transition

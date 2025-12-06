@@ -19,7 +19,7 @@
     </template>
 
     <template #discussions>
-     <CompanyDiscussions v-if="company" :company="company"/>
+     <CompanyDiscussions v-if="company && authStore.authenticated_user && authStore.authenticated_user.id" :company="company"/>
     </template>
   </UTabs>
 
@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-
+import { useAuthStore } from '~/stores/auth'
 
 // No script needed here for layout
 definePageMeta({
@@ -40,6 +40,7 @@ definePageMeta({
 })
 const { $supabase } = useNuxtApp()
 const route = useRoute()
+const authStore = useAuthStore()
 const tabs = [
   {
     label: 'Jobs',
