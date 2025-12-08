@@ -8,6 +8,7 @@ import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
 const { $supabase } = useNuxtApp()
 const envConfig = useRuntimeConfig();
 const toast = useToast()
+
 const router = useRouter()
 const fields: AuthFormField[] = [{
   name: 'email',
@@ -38,9 +39,23 @@ const providers = [{
     redirectTo: envConfig.public.FRONTEND_REDIRECT_URL,
   },
       });
-      if (error) throw error
-      // router.push("/jobs")
-      // toast.add({ title: "Google", description: "Login with Google" });
+      if (error) {
+          toast.add({
+    title: 'Uh oh! Something went wrong.',
+    description: error.message,
+    icon: 'i-lucide-user',
+    color: 'error'
+  })
+      }else{
+
+     toast.add({
+    title: 'Login Successful',
+    icon: 'i-lucide-user',
+    color: 'success'
+  })
+router.push("/")
+      }
+      
       
     },
 }, ]
@@ -58,8 +73,24 @@ let { data, error } = await $supabase.auth.signInWithPassword({
   email: payload.data.email,
   password: payload.data.password
 })
-if(error) throw error;
+if(error) {
+  if(error.code){
+    console.log(error.code)
+  toast.add({
+    title: 'Uh oh! Something went wrong.',
+    description: error.message,
+    icon: 'i-lucide-user',
+    color: 'error'
+  })
+}
+}else{
+toast.add({
+    title: 'Login Successful',
+    icon: 'i-lucide-user',
+    color: 'success'
+  })
 router.push("/")
+}
 }
 </script>
 

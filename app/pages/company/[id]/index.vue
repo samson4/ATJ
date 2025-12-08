@@ -19,7 +19,7 @@
     </template>
 
     <template #discussions>
-     <CompanyDiscussions v-if="company && authStore.authenticated_user && authStore.authenticated_user.id" :company="company"/>
+     <CompanyDiscussions v-if="company" :company="company"/>
     </template>
   </UTabs>
 

@@ -16,8 +16,8 @@
 
       <div class="flex items-start gap-3">
         <UAvatar 
-          :src="currentUser?.avatar || '/default-avatar.png'" 
-          :alt="currentUser?.name || 'User'" 
+          :src="currentUser?.user_metadata.avatar_url || '/default-avatar.png'" 
+          :alt="currentUser?.user_metadata.full_name || 'User'" 
           size="md" 
         />
         <div class="flex-1 space-y-3">
@@ -88,12 +88,12 @@
             <div class="flex justify-between items-start">
               <div class="flex items-center gap-3">
                 <UAvatar 
-                  :src="discussion.user_avatar || '/default-avatar.png'" 
+                  :src="discussion.avatar_url || '/default-avatar.png'" 
                   :alt="discussion.user_name" 
                   size="md" 
                 />
                 <div>
-                  <h4 class="font-medium text-gray-900 dark:text-white">{{ discussion.user_name }}</h4>
+                  <h4 class="font-medium text-gray-900 dark:text-white">{{ discussion.full_name ? discussion.full_name : discussion.user_email }}</h4>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
                     {{ formatDate(discussion.created_at) }}
                   </p>
@@ -101,16 +101,17 @@
               </div>
               
               <div class="flex items-center gap-2">
-                <UBadge 
-                  v-if="discussion.is_answered" 
-                  color="green" 
-                  variant="soft"
-                >
-                  Answered
-                </UBadge>
+                <UButton
+                 v-if="currentUser?.id === discussion.user_id"
+                  color="primary" 
+                  variant="ghost" 
+                  icon="i-heroicons-pencil"
+                  size="xs"
+                  @click="editQuestion(discussion.id)"
+                />
                 <UButton 
                   v-if="currentUser?.id === discussion.user_id"
-                  color="gray" 
+                  color="neutral" 
                   variant="ghost" 
                   icon="i-heroicons-trash"
                   size="xs"
@@ -123,7 +124,7 @@
           <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ discussion.content }}</p>
 
           <!-- Answers Section -->
-          <div v-if="discussion.answers && discussion.answers.length > 0" class="mt-4 space-y-3">
+          <!-- <div v-if="discussion.answers && discussion.answers.length > 0" class="mt-4 space-y-3">
             <USeparator label="Answers" />
             
             <UCard 
@@ -154,7 +155,7 @@
             </UCard>
           </div>
 
-          <!-- Answer Form -->
+           Answer Form
           <template #footer>
             <div class="flex gap-3">
               <UAvatar 
@@ -180,7 +181,7 @@
                 </div>
               </div>
             </div>
-          </template>
+          </template> -->
         </UCard>
       </div>
     </div>
@@ -201,8 +202,8 @@ const company = props.company
 const discussions = ref<any[]>([])
 const newQuestion = ref('')
 const loading = ref(true)
-const store = useAuthStore()
-const currentUser = store.authenticated_user
+const authStore = useAuthStore()
+const currentUser = ref(authStore.authenticated_user)
 
 
 // Fetch discussions
@@ -211,29 +212,15 @@ const fetchDiscussions = async () => {
     loading.value = true
     const { data, error } = await $supabase
       .schema("companies")
-      .from('discussions')
-      .select(`
-        *,
-        answers (
-          *,
-          user:users(name, avatar)
-        )
-      `)
+      .from('discussions_with_user_info')
+      .select(`*`)
       .eq('company_id', route.params.id)
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
     // Transform data to include user info and newAnswer field
-    discussions.value = (data || []).map(discussion => ({
-      ...discussion,
-      newAnswer: '',
-      answers: (discussion.answers || []).map((answer: any) => ({
-        ...answer,
-        user_name: answer.user?.name || 'Anonymous',
-        user_avatar: answer.user?.avatar
-      }))
-    }))
+    discussions.value = data
   } catch (error) {
     console.error('Error fetching discussions:', error)
     // You could add a toast notification here
@@ -253,8 +240,7 @@ const submitQuestion = async () => {
       .insert({
         company_id: route.params.id,
         user_id: currentUser.value.id,
-        content: newQuestion.value.trim(),
-        created_at: new Date().toISOString()
+        content: newQuestion.value.trim()
       })
 
     if (error) throw error
@@ -291,6 +277,25 @@ const submitAnswer = async (discussionId: string, answerContent: string) => {
   }
 }
 
+//edit a question
+const editQuestion = async (discussionId: string) => {
+
+  try {
+    const { error } = await $supabase
+      .schema("companies")
+      .from('discussions')
+      .update()
+      .set('content', newQuestion.value.trim())
+
+    if (error) throw error
+
+    newQuestion.value = ''
+    await fetchDiscussions()
+  } catch (error) {
+    console.error('Error deleting question:', error)
+  }
+}
+
 // Delete a question
 const deleteQuestion = async (discussionId: string) => {
   if (!confirm('Are you sure you want to delete this question?')) return
@@ -323,6 +328,6 @@ const formatDate = (dateString: string) => {
 
 // Fetch discussions on component mount
 onMounted(() => {
-//   fetchDiscussions()
+  fetchDiscussions()
 })
 </script>

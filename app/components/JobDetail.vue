@@ -81,7 +81,7 @@ const applyLink = computed(() => {
       <div class="flex items-center gap-4">
         <UAvatar :src="selectedJob.company_logo" icon="i-heroicons-building-office-2" size="lg" />
         <div>
-          <NuxtLink v-if="selectedJob.company_id" :to="`/company/${selectedJob.company_id}`" class="text-sm text-primary-600 font-medium">
+          <NuxtLink v-if="selectedJob.company_id" :to="`/company/${selectedJob.company_id}`" class="text-sm text-primary-600 font-medium hover:underline">
             {{ selectedJob.company_name || 'Company' }}
           </NuxtLink>
           <h2 class="text-xl font-bold mt-1">{{ selectedJob.role || selectedJob.title || 'Untitled Role' }}</h2>

@@ -71,16 +71,33 @@ import { useJobStore } from "~/stores/job"
 const jobStore = useJobStore()
 
 const selectJob = (job: Job) => {
-  if (jobStore.selectedJob && jobStore.selectedJob.id == job.id) {
-    jobStore.selectedJob = {}
-   
+  const current = jobStore.selectedJob
+ 
+  if (current && current.id === job.id) {
+    open.value = !open.value
+    if (!open.value) jobStore.selectedJob = {}
   } else {
+    
     jobStore.selectedJob = job
-     open.value = true
+    open.value = true
   }
 }
 
 const selectedJob = computed(() => jobStore.selectedJob)
+
+
+watch(open, (val) => {
+  if (!val) {
+    
+    jobStore.selectedJob = {}
+  }
+})
+
+const closeSlideOver = () => {
+  open.value = false
+  jobStore.selectedJob = {}
+}
+
 
 const visibleTags = (job: Job) => {
   const t = job.tags || []
@@ -154,7 +171,7 @@ onMounted(async () => {
     console.error(error)
   } else {
     if(jobStore.selectedJob){
-      open.value = true
+      jobStore.selectedJob = {}
     }
     jobs.value = data
   }
@@ -247,7 +264,7 @@ onMounted(async () => {
           leave-to-class="opacity-0"
         >
           <div v-if="selectedJob && selectedJob.id" class="h-full">
-            <JobDetail @close="selectedJob = null" />
+            <JobDetail @close="closeSlideOver" />
           </div>
         </Transition>
       </template>

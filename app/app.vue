@@ -41,10 +41,12 @@ const isDark = computed({
 </script>
 
 <template >
-
-      <NuxtLayout class="bg-indigo-500">
+ <UApp>
+  <NuxtLayout class="bg-indigo-500">
     <NuxtPage />
   </NuxtLayout>
+ </UApp>
+      
 
 
 </template>

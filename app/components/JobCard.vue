@@ -25,7 +25,7 @@
             
             <div class="gap-4">
               <div class="flex justify-between">
-<NuxtLink :to="`/company/${job.company_id}`" class="text-sm text-primary-600 font-medium">
+<NuxtLink  class="text-sm text-primary-600 font-medium">
                 {{ job.company_name }}
               </NuxtLink>
               <UBadge icon="i-heroicons-map-pin" size="sm" variant="outline" v-if="job.workplace" color="neutral">{{ (job.workplace || '').toString().replace(/^\w/, c => c.toUpperCase()) }}</UBadge>

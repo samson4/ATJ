@@ -44,7 +44,22 @@ const providers = [
     redirectTo: envConfig.public.FRONTEND_REDIRECT_URL,
   },
       });
-      if (error) throw error
+      if (error) {
+          toast.add({
+    title: 'Uh oh! Something went wrong.',
+    description: error.message,
+    icon: 'i-lucide-user',
+    color: 'error'
+  })
+      }else{
+
+     toast.add({
+    title: 'Signup Successful',
+    icon: 'i-lucide-user',
+    color: 'success'
+  })
+router.push("/")
+      }
       // router.push("/jobs")
       // toast.add({ title: "Google", description: "Login with Google" });
       // console.log("data",data)
@@ -71,9 +86,23 @@ let { data, error } = await $supabase.auth.signUp({
   email: payload.data.email,
   password: payload.data.password
 })
-if (error) throw error
+if (error) {
+          toast.add({
+    title: 'Uh oh! Something went wrong.',
+    description: error.message,
+    icon: 'i-lucide-user',
+    color: 'error'
+  })
+      }else{
 
+     toast.add({
+    title: 'Signup Successful',
+    icon: 'i-lucide-user',
+    color: 'success'
+  })
 router.push("/auth/signin")
+      }
+
 }
 </script>
 
