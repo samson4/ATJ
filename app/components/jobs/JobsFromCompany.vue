@@ -66,6 +66,10 @@ const { $supabase } = useNuxtApp()
 const route = useRoute()
 const loading = ref(true)
 const jobs = ref<Job[]>([])
+const page = ref(1)
+
+const itemsPerPage = ref(10)
+const totalJobs = ref(0)
 import { useJobStore } from "~/stores/job"
 
 const jobStore = useJobStore()
@@ -91,6 +95,10 @@ watch(open, (val) => {
     
     jobStore.selectedJob = {}
   }
+})
+
+watch([page, itemsPerPage], () => {
+  fetchJobs()
 })
 
 const closeSlideOver = () => {
@@ -159,23 +167,37 @@ const truncate = (text: string | undefined | null, n = 120) => {
   if (!text) return ''
   return text.length > n ? text.slice(0, n) + '...' : text
 }
-onMounted(async () => {
+
+const fetchJobs = async()=>{
   loading.value = true
-  const { data, error } = await $supabase.schema("jobs")
+      const from = (page.value - 1) * itemsPerPage.value
+    const to = page.value * itemsPerPage.value - 1
+  try{
+    
+  const { data, error, count } = await $supabase.schema("jobs")
     .from('job_with_company_info')
-    .select(`*`)
+    // request exact count so we can use pagination UI
+    .select(`*`, { count: 'exact' })
     .eq("company_id", route.params.id)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
-  if (error) {
-    console.error(error)
-  } else {
-    if(jobStore.selectedJob){
-      jobStore.selectedJob = {}
-    }
+     if (error) throw error
+    jobStore.selectedJob = {}
+    jobStore.jobList = data || []
     jobs.value = data
-  }
+    totalJobs.value = typeof count === 'number' ? count : (data || []).length
+
   loading.value = false
+} catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+//hooks
+onMounted(() => {
+  fetchJobs()
 })
 </script>
 
@@ -203,12 +225,20 @@ onMounted(async () => {
 
         <div class="flex-1">
           <div class="flex items-start justify-between gap-3">
-            <div>
-              <NuxtLink :to="`/company/${job.company_id}`" class="text-sm text-primary-600 font-medium">
+            <div class="gap-4">
+              <div class="flex gap-9">
+<NuxtLink  class="text-sm text-primary-600 font-medium">
                 {{ job.company_name }}
               </NuxtLink>
+              <UBadge icon="i-heroicons-map-pin" size="sm" variant="outline" v-if="job.workplace" color="neutral">{{ (job.workplace || '').toString().replace(/^\w/, c => c.toUpperCase()) }}</UBadge>
+            
+              </div>
+              
               <h3 class="text-lg font-semibold mt-1">{{ job.role }}</h3>
-              <div v-html="marked.parse(truncate(job.job_description, 120))" class="text-sm mt-1 line-clamp-2"></div>
+              
+          
+              <div v-html="marked.parse( truncate(job.job_description, 120))" class="text-sm mt-1 line-clamp-2"></div>
+              
             </div>
             <div class="flex items-center gap-4 text-sm text-gray-600">
              
@@ -216,12 +246,6 @@ onMounted(async () => {
               <span v-if="job.verified" class="text-blue-500 ml-2">Verified</span>
              </div>
              
-            </div>
-            <div class="flex flex-col items-end gap-2">
-             
-              <div class="text-sm text-gray-500">
-                <div v-if="job.deadline">Deadline {{ formatDate(job.deadline) }}</div>
-              </div>
             </div>
           </div>
 
@@ -269,6 +293,13 @@ onMounted(async () => {
         </Transition>
       </template>
     </USlideover>
-     
+     <div class="flex justify-center my-4">
+      <UPagination
+    v-model:page="page"
+    :items-per-page="itemsPerPage"
+    active-color="primary"
+    :total="totalJobs"
+  />
+  </div>
   </div>
 </template>

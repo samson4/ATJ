@@ -51,9 +51,18 @@ const visibleTags = (j: Job) => (j?.tags || []).slice(0, 5);
 const extraTagCount = (j: Job) => Math.max(0, (j?.tags?.length || 0) - 5);
 
 const formatDate = (d?: string | null) => {
-  if (!d) return '—';
-  try { return new Date(d).toLocaleDateString(); } catch { return d as string; }
-};
+  if (!d) return ''
+ 
+  try {
+    return new Date(d).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch {
+    return d
+  }
+}
 const timeAgo = (d?: string | null) => {
   if (!d) return 'unknown';
   const diff = Date.now() - new Date(d).getTime();

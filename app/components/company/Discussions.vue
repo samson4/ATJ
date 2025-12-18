@@ -183,6 +183,14 @@
             </div>
           </template> -->
         </UCard>
+           <div class="flex justify-center my-4">
+      <UPagination
+    v-model:page="page"
+    :items-per-page="itemsPerPage"
+    active-color="primary"
+    :total="totalDiscussions"
+  />
+  </div>
       </div>
     </div>
   </div>
@@ -204,23 +212,27 @@ const newQuestion = ref('')
 const loading = ref(true)
 const authStore = useAuthStore()
 const currentUser = ref(authStore.authenticated_user)
-
-
+const page = ref(1)
+const itemsPerPage = ref(50)
+const totalDiscussions = ref(0)
 // Fetch discussions
 const fetchDiscussions = async () => {
+  const from = (page.value - 1) * itemsPerPage.value
+    const to = page.value * itemsPerPage.value - 1
   try {
     loading.value = true
-    const { data, error } = await $supabase
+    const { data, error, count } = await $supabase
       .schema("companies")
       .from('discussions_with_user_info')
-      .select(`*`)
+      .select(`*`, { count: 'exact' })
       .eq('company_id', route.params.id)
       .order('created_at', { ascending: false })
-
+      .range(from, to)
     if (error) throw error
 
     // Transform data to include user info and newAnswer field
     discussions.value = data
+    totalDiscussions.value = typeof count === 'number' ? count : (data || []).length
   } catch (error) {
     console.error('Error fetching discussions:', error)
     // You could add a toast notification here
@@ -328,6 +340,10 @@ const formatDate = (dateString: string) => {
 
 // Fetch discussions on component mount
 onMounted(() => {
+  fetchDiscussions()
+})
+
+watch([page, itemsPerPage], () => {
   fetchDiscussions()
 })
 </script>

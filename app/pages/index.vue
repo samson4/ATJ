@@ -48,6 +48,7 @@ const searchJobs = async() => {
       .from('job_with_company_info')
       .select('*')
       .or(`job_description.ilike.%${searchQuery.value}%,role.ilike.%${searchQuery.value}%,company_name.ilike.%${searchQuery.value}%`)
+      .order('created_at', { ascending: false })
   if (error) {
     console.error("Error fetching jobs:", error);
     loading.value = false;

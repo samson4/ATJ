@@ -4,7 +4,7 @@
     <JobCardSkeleton />
   </div>
 
-  <div v-else class="space-y-4">
+  <div v-else class="space-y-4 ">
     <UCard
       v-for="job in filteredJobs"
       :key="job.id"
@@ -45,12 +45,6 @@
              </div>
              
             </div>
-            <div class="flex flex-col items-end gap-2">
-             
-              <div class="text-sm text-gray-500">
-                <div v-if="job.deadline">Deadline {{ formatDate(job.deadline) }}</div>
-              </div>
-            </div>
           </div>
 
          
@@ -79,6 +73,14 @@
           </div>
           </template>
     </UCard>
+    <div class="flex justify-center">
+      <UPagination
+    v-model:page="page"
+    :items-per-page="itemsPerPage"
+    active-color="primary"
+    :total="totalJobs"
+  />
+  </div>
   </div>
 </template>
 
@@ -142,7 +144,10 @@ interface Job {
 const jobStore = useJobStore()
 const jobs = computed<Job[]>(() => jobStore.jobList || [])
 const loading = ref(true)
+const page = ref(1)
 
+const itemsPerPage = ref(50)
+const totalJobs = ref(0)
 const selectedJob = computed(() => jobStore.selectedJob)
 
 // helpers for display
@@ -151,15 +156,7 @@ const truncate = (text: string | undefined | null, n = 120) => {
   return text.length > n ? text.slice(0, n) + '...' : text
 }
 
-const formatMoney = (value: number | undefined | null) => {
-  if (value == null) return '—'
-  if (value >= 1000) return `$${Math.round(value / 1000)}k`
-  return `$${value}`
-}
 
-const hasSalary = (job: Job) => {
-  return job.salary_min != null || job.salary_max != null
-}
 
 const visibleTags = (job: Job) => {
   const t = job.tags || []
@@ -185,24 +182,7 @@ const formatDate = (d?: string | null) => {
   }
 }
 
-const timeAgo = (d?: string | null) => {
-  if (!d) return 'unknown'
-  const diff = Date.now() - new Date(d).getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  if (days === 0) return 'today'
-  if (days === 1) return 'yesterday'
-  return `${days}d`
-}
 
-const capitalize = (s?: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
-
-// compute apply link (support mailto and URLs)
-const applyLink = (job: Job) => {
-  if (!job.link) return `/company/${job.company_id}`
-  if (job.link.startsWith('mailto:')) return job.link
-  if (job.link.includes('@') && !job.link.startsWith('http')) return `mailto:${job.link}`
-  return job.link
-}
 
 // computed filtered list based on filters prop (keeps existing logic)
 const filteredJobs = computed(() => {
@@ -245,22 +225,35 @@ const selectJob = (job: Job) => {
     jobStore.selectedJob = job
   }
 }
-
-//hooks: fetch jobs and store into jobStore.jobList (keeps existing behavior)
-onMounted(async()=>{
+const fetchJobs = async () => {
   loading.value = true
   try {
-    const { data, error } = await $supabase.schema("jobs")
+    const from = (page.value - 1) * itemsPerPage.value
+    const to = page.value * itemsPerPage.value - 1
+
+    const { data, error, count } = await $supabase
+      .schema("jobs")
       .from('job_with_company_info')
-      .select(`*`)
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
+      .range(from, to)
+
     if (error) throw error
-    // keep the store assignment so other components can access list
+
     jobStore.jobList = data || []
+    totalJobs.value = typeof count === 'number' ? count : (data || []).length
   } catch (e) {
     console.error(e)
   } finally {
     loading.value = false
   }
+}
+//hooks: fetch jobs and store into jobStore.jobList (keeps existing behavior)
+onMounted(async()=>{
+  fetchJobs()
+})
+
+watch([page, itemsPerPage], () => {
+  fetchJobs()
 })
 </script>
