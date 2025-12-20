@@ -4,9 +4,10 @@
     <JobCardSkeleton />
   </div>
 
-  <div v-else class="space-y-4 ">
+  <div v-else-if="filteredJobs.length" class="space-y-4 ">
     <UCard
       v-for="job in filteredJobs"
+      
       :key="job.id"
       @click="selectJob(job)"
       class="text-sm cursor-pointer border-l-2 transition-colors my-6"
@@ -81,6 +82,9 @@
     :total="totalJobs"
   />
   </div>
+  </div>
+  <div v-else class="text-center py-10 text-gray-500">
+    No jobs found matching the selected criteria.
   </div>
 </template>
 

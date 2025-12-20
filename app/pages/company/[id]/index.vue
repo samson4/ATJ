@@ -1,19 +1,19 @@
 <template>
   <UPage>
    
-      <div class="flex gap-8">
+      <div class="flex justify-center gap-8">
         <!-- Left Sidebar: Company Info -->
-        <UPageAside class="w-1/3 lg:w-1/3">
+        <UPageAside class="w-1/3 lg:w-1/3 md:w-1/3 sm:w-full xs:w-full">
           <div>
             <CompanyInfo v-if="company" :company="company"/>
           </div>
         </UPageAside>
 
         <!-- Main Content: Jobs From Company -->
-        <div class="flex-1 mt-8">
+        <div class="flex-1  mt-8">
           
 
-            <UTabs :unmount-on-hide="false" :items="tabs" variant="link">
+            <UTabs class="w-2/3" :unmount-on-hide="false" :items="tabs" variant="link">
     <template #jobs>
       <JobsFromCompany />
     </template>
