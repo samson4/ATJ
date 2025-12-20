@@ -57,14 +57,21 @@ const TagOptions = [
 
 // 2. Computed Label for the Button (e.g. "Jan 10 - Jan 20")
 const dateLabel = computed(() => {
-  if (!dateRange.value.start || !dateRange.value.end) {return 'Anytime'}
+  console.log('Date Range:', dateRange.value)
+  if (dateRange.value.start == undefined ) {
+    return 'Anytime'
+  }
+  if (dateRange.value.end == undefined ) {
+    return format(dateRange.value.start, 'd MMM, yyyy')
+  }
   
   const startStr = format(dateRange.value.start, 'd MMM, yyyy')
   const endStr = dateRange.value.end ? format(dateRange.value.end, 'd MMM, yyyy') : ''
-  
+   
   if (!dateRange.value.end || isSameDay(dateRange.value.start, dateRange.value.end)) {
     return startStr
   }
+ 
   return `${startStr} - ${endStr}`
 
 })
