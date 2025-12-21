@@ -2,38 +2,7 @@
 import { marked } from 'marked';
 import { useJobStore } from "~/stores/job";
 import { computed } from 'vue';
-
-interface Job {
-  id: string;
-  created_at?: string | null;
-  updated_at?: string | null;
-
-  role?: string;
-  title?: string;
-  job_description?: string | null;
-  short_description?: string | null;
-  description?: string | null;
-
-  company_id?: string;
-  company_name?: string;
-  company_logo?: string | null;
-  company_website?: string | null;
-  company_description?: string | null;
-
-  tags?: string[];
-  workplace?: string;
-  employment_type?: string;
-  salary_min?: number | null;
-  salary_max?: number | null;
-  currency?: string | null;
-
-  link?: string | null;
-  deadline?: string | null;
-  rating?: number | null;
-  verified?: boolean | null;
-  proposals?: number | null;
-  [key: string]: any;
-}
+import type { Job } from '~/interfaces/jobInterface'
 
 const jobStore = useJobStore();
 const selectedJob = computed<Job>(() => jobStore.selectedJob || ({} as Job));

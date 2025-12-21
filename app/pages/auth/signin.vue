@@ -105,7 +105,16 @@ router.push("/")
         :fields="fields"
         :providers="providers"
         @submit="onSubmit"
-      />
+      >
+
+    <template #password-hint>
+      <ULink
+        to="/auth/reset-password"
+        class="text-primary font-medium"
+        tabindex="-1"
+      >Forgot password?</ULink>
+    </template>
+    </UAuthForm>
     </UPageCard>
     
         <ULink class="flex flex-col justify-center"  to="/auth/signup">Or Create an account.</ULink>

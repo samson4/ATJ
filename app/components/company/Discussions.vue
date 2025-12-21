@@ -115,13 +115,38 @@
                   variant="ghost" 
                   icon="i-heroicons-trash"
                   size="xs"
-                  @click="deleteQuestion(discussion.id)"
+                  @click="openModal(discussion.id)"
                 />
               </div>
             </div>
           </template>
-
-          <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ discussion.content }}</p>
+          
+          
+          <div v-if="editingDiscussionId === discussion.id">
+            <UTextarea 
+              v-model="discussion.content"
+              :rows="3"
+              class="w-full mt-2"
+            />
+            <div class="flex justify-end mt-2">
+              <UButton 
+                size="sm" 
+                color="primary" 
+                @click="saveEditedQuestion(discussion.id, discussion.content)"
+              >
+                Save
+              </UButton>
+              <UButton 
+                size="sm" 
+                variant="outline" 
+                class="ml-2" 
+                @click="editingDiscussionId = null"
+              >
+                Cancel
+              </UButton>
+            </div>
+          </div>
+          <p v-else class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ discussion.content }}</p>
 
           <!-- Answers Section -->
           <!-- <div v-if="discussion.answers && discussion.answers.length > 0" class="mt-4 space-y-3">
@@ -200,11 +225,25 @@
 const { $supabase } = useNuxtApp()
 const route = useRoute()
 import { useAuthStore } from "~/stores/auth"
+import DisplayConfirmation from '~/components/display/Confirmation.vue'
 // Props
 const props = defineProps<{
   company: any
 }>()
 
+const overlay = useOverlay()
+const toast = useToast()
+
+
+async function openModal(discussionId: string) {
+ const modal = overlay.create(DisplayConfirmation)
+  const instance = modal.open({
+    onConfirm: async () => {
+      await deleteQuestion(discussionId)
+      modal.close()
+    }
+  })
+}
 // State
 const company = props.company
 const discussions = ref<any[]>([])
@@ -215,6 +254,7 @@ const currentUser = ref(authStore.authenticated_user)
 const page = ref(1)
 const itemsPerPage = ref(50)
 const totalDiscussions = ref(0)
+const editingDiscussionId = ref<string | null>(null)
 // Fetch discussions
 const fetchDiscussions = async () => {
   const from = (page.value - 1) * itemsPerPage.value
@@ -235,7 +275,7 @@ const fetchDiscussions = async () => {
     totalDiscussions.value = typeof count === 'number' ? count : (data || []).length
   } catch (error) {
     console.error('Error fetching discussions:', error)
-    // You could add a toast notification here
+    
   } finally {
     loading.value = false
   }
@@ -291,16 +331,18 @@ const submitAnswer = async (discussionId: string, answerContent: string) => {
 
 //edit a question
 const editQuestion = async (discussionId: string) => {
-
+  editingDiscussionId.value = discussionId
+}
+const saveEditedQuestion = async (discussionId: string, updatedContent: string) => {
   try {
     const { error } = await $supabase
       .schema("companies")
       .from('discussions')
-      .update()
-      .set('content', newQuestion.value.trim())
+      .update({ content: updatedContent })
+      .eq('id', discussionId)
 
     if (error) throw error
-
+    editingDiscussionId.value = null
     newQuestion.value = ''
     await fetchDiscussions()
   } catch (error) {
@@ -310,7 +352,7 @@ const editQuestion = async (discussionId: string) => {
 
 // Delete a question
 const deleteQuestion = async (discussionId: string) => {
-  if (!confirm('Are you sure you want to delete this question?')) return
+ 
 
   try {
     const { error } = await $supabase
@@ -320,9 +362,18 @@ const deleteQuestion = async (discussionId: string) => {
       .eq('id', discussionId)
 
     if (error) throw error
-
+    toast.add({
+      title: 'Question deleted successfully.',
+      icon: 'i-heroicons-trash',
+      color: 'success'
+    })
     await fetchDiscussions()
   } catch (error) {
+    toast.add({
+      title: 'Error deleting question.',
+      icon: 'i-heroicons-trash',
+      color: 'error'
+    })
     console.error('Error deleting question:', error)
   }
 }

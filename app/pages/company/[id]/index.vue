@@ -20,6 +20,7 @@
 
     <template #discussions>
      <CompanyDiscussions v-if="company && authStore.authenticated_user && authStore.authenticated_user.id" :company="company"/>
+     <p v-else class="text-center text-gray-500 mt-8">Please sign in to view and participate in discussions.</p>
     </template>
   </UTabs>
 
@@ -33,7 +34,7 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
-
+import type { Company } from '~/interfaces/companyInterface'
 // No script needed here for layout
 definePageMeta({
   layout: 'default'
@@ -57,15 +58,7 @@ const tabs = [
 
 
 
-interface Company {
-  id: string;
-  created_at: string;
-  update_at: string;
-  name: string;
-  website: string;
-  description: string;
-  logo: string;
-}
+
 
 const company = ref<Company | null>(null)
 onMounted(async () => {
