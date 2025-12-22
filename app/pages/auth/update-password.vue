@@ -17,8 +17,38 @@
 </template>
 
 <script setup lang="ts">
-    
+import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
+import * as z from 'zod'
 
+const { $supabase } = useNuxtApp();
+
+const schema = z.object({
+  password: z.string().min(8, "Must be at least 8 characters"),
+  confirm: z.string().min(8, "Must be at least 8 characters"),
+}).refine((data) => data.password === data.confirm, {
+  message: "Passwords do not match",
+})
+const fields: AuthFormField[] = [
+  {
+    name: "password",
+    label: "Password",
+    type: "password",
+    placeholder: "Enter your password",
+    required: true,
+  },
+  {
+    name: "confirm",
+    label: "Confirm Password",
+    type: "password",
+    placeholder: "re-type your password",
+    required: true,
+  },
+];   
+const updatePassword = async(payload: FormSubmitEvent<Schema>)=> {
+let { data, error } = await $supabase.auth.updateUser({
+  password: payload.data.password,
+})
+}
 </script>
 
 <style>
