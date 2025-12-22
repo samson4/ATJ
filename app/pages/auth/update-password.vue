@@ -22,12 +22,14 @@ import * as z from 'zod'
 
 const { $supabase } = useNuxtApp();
 const router = useRouter()
+const toast = useToast()
 const schema = z.object({
   password: z.string().min(8, "Must be at least 8 characters"),
   confirm: z.string().min(8, "Must be at least 8 characters"),
 }).refine((data) => data.password === data.confirm, {
   message: "Passwords do not match",
 })
+type Schema = z.output<typeof schema>
 const fields: AuthFormField[] = [
   {
     name: "password",
@@ -57,6 +59,7 @@ if(error) {
     icon: 'i-lucide-lock',
     color: 'error'
   })
+}
 }else{
 toast.add({
     title: 'Password Updated Successfully',
@@ -64,6 +67,7 @@ toast.add({
     color: 'success'
   })
  router.push("/auth/signin")
+}
 }
 </script>
 
