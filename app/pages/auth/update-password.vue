@@ -21,7 +21,7 @@ import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
 import * as z from 'zod'
 
 const { $supabase } = useNuxtApp();
-
+const router = useRouter()
 const schema = z.object({
   password: z.string().min(8, "Must be at least 8 characters"),
   confirm: z.string().min(8, "Must be at least 8 characters"),
@@ -48,6 +48,22 @@ const updatePassword = async(payload: FormSubmitEvent<Schema>)=> {
 let { data, error } = await $supabase.auth.updateUser({
   password: payload.data.password,
 })
+if(error) {
+  if(error.code){
+    console.log(error.code)
+  toast.add({
+    title: 'Uh oh! Something went wrong.',
+    description: error.message,
+    icon: 'i-lucide-lock',
+    color: 'error'
+  })
+}else{
+toast.add({
+    title: 'Password Updated Successfully',
+    icon: 'i-lucide-lock',
+    color: 'success'
+  })
+ router.push("/auth/signin")
 }
 </script>
 
