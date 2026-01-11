@@ -9,8 +9,7 @@ export default defineNuxtConfig({
       owner: 'samson4',
       repo: 'ATJ',
       branch: 'main'
-    },
-    dev: false
+    }
   },
  pinia: {
     storesDirs: ['./stores/**', './custom-folder/stores/**'],
