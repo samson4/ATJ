@@ -6,6 +6,12 @@ import { useJobStore } from "~/stores/job"
 const { $supabase } = useNuxtApp()
 const jobStore = useJobStore()
 
+
+const { data: page } = await useAsyncData('index', () => {
+  return queryCollection('content').first()
+})
+console.log("page",page)
+
 // --- State ---
 const searchQuery = ref('')
 const loading = ref(false)
@@ -151,6 +157,9 @@ const searchJobs = async () => {
 
 <template>
   <div>
+  <UPageHero :title="page?.title"
+  :description="page?.description"
+  />
     <div
       style="background-image: url('atj.jpeg');"
       class="bg-no-repeat bg-cover bg-bottom w-full h-[350px] flex justify-center items-center relative rounded-md overflow-hidden mb-6"

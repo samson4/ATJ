@@ -2,7 +2,16 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/ui','@pinia/nuxt'],
+  modules: ['@nuxt/ui', '@nuxt/content', '@pinia/nuxt', 'nuxt-studio'],
+  studio: {
+    repository: {
+      provider: 'github', // 'github' or 'gitlab'
+      owner: 'samson4',
+      repo: 'ATJ',
+      branch: 'main'
+    },
+    dev: false
+  },
  pinia: {
     storesDirs: ['./stores/**', './custom-folder/stores/**'],
   },
