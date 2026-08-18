@@ -2,42 +2,29 @@
 </script>
 
 <template>
-          <UHeader>
-      <template #left>
-        <NuxtLink to="/">
-          <AppLogo class="w-auto h-6 shrink-0" />
-        </NuxtLink>
+  <UHeader>
+    <template #left>
+      <NuxtLink to="/">
+        <AppLogo class="w-auto h-6 shrink-0" />
+      </NuxtLink>
+    </template>
 
-        <!-- <TemplateMenu /> -->
-      </template>
+    <template #right>
+      <UColorModeButton />
+    </template>
+  </UHeader>
 
-      <template #right>
-            <UColorModeButton /> 
-      </template>
-    </UHeader>
- 
-    <UMain>
+  <UMain>
     <slot />
-    </UMain>
-    <USeparator />
-       <UFooter>
-      <template #left>
-        <p class="text-sm text-muted">
-          Built with Nuxt UI • © {{ new Date().getFullYear() }}
-        </p>
-      </template>
+  </UMain>
 
-      <template #right>
-        <UButton
-          to="https://github.com/nuxt-ui-templates/starter"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
-        />
-      </template>
-    </UFooter>
- 
+  <USeparator />
+
+  <UFooter>
+    <template #left>
+      <p class="text-sm text-muted">
+        Addis Tech Jobs • © {{ new Date().getFullYear() }}
+      </p>
+    </template>
+  </UFooter>
 </template>
-

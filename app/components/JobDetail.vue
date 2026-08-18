@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { marked } from 'marked';
 import { useJobStore } from "~/stores/job";
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { Job } from '~/interfaces/jobInterface'
 
 const jobStore = useJobStore();
@@ -48,6 +48,71 @@ const applyLink = computed(() => {
   if (link.includes('@') && !link.startsWith('mailto:')) return `mailto:${link}`;
   return link;
 });
+
+const isSaved = computed(() => jobStore.isJobSaved(selectedJob.value?.id));
+const isSaving = computed(() => jobStore.isSavingJob(selectedJob.value?.id));
+const isApplied = computed(() => jobStore.isJobApplied(selectedJob.value?.id));
+const isApplying = computed(() => jobStore.isApplyingJob(selectedJob.value?.id));
+const applicationPromptJobId = ref<string | null>(null);
+const dismissedApplicationPromptJobIds = ref<string[]>([]);
+const showApplicationPrompt = computed(() => {
+  const jobId = selectedJob.value?.id;
+  return !!jobId
+    && applicationPromptJobId.value === jobId
+    && !isApplied.value
+    && !dismissedApplicationPromptJobIds.value.includes(jobId);
+});
+
+const toggleSaved = async () => {
+  await jobStore.toggleSavedJob(selectedJob.value?.id);
+};
+
+const openApplyLink = (link: string) => {
+  if (link.startsWith('mailto:')) {
+    window.location.href = link;
+    return;
+  }
+
+  window.open(link, '_blank', 'noopener,noreferrer');
+};
+
+const submitApplication = async () => {
+  if (!applyLink.value) return;
+
+  openApplyLink(applyLink.value);
+
+  const jobId = selectedJob.value?.id;
+  if (!jobId || isApplied.value || dismissedApplicationPromptJobIds.value.includes(jobId)) return;
+
+  const user = await jobStore.getCurrentUser();
+  if (user) {
+    applicationPromptJobId.value = jobId;
+  }
+};
+
+const confirmApplied = async () => {
+  const jobId = selectedJob.value?.id;
+  const tracked = await jobStore.markJobApplied(jobId);
+
+  if (tracked) {
+    applicationPromptJobId.value = null;
+  }
+};
+
+const dismissApplicationPrompt = () => {
+  const jobId = selectedJob.value?.id;
+  if (!jobId) return;
+
+  if (!dismissedApplicationPromptJobIds.value.includes(jobId)) {
+    dismissedApplicationPromptJobIds.value.push(jobId);
+  }
+
+  applicationPromptJobId.value = null;
+};
+
+watch(() => selectedJob.value?.id, () => {
+  applicationPromptJobId.value = null;
+});
 </script>
 
 <template>
@@ -78,14 +143,26 @@ const applyLink = computed(() => {
       </div>
 
       <div class="flex-shrink-0 flex flex-col items-end gap-3">
+         <UButton
+          v-if="selectedJob.id"
+          :aria-label="isSaved ? 'Remove saved job' : 'Save job'"
+          :icon="isSaved ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
+          :color="isSaved ? 'primary' : 'neutral'"
+          :variant="isSaved ? 'solid' : 'outline'"
+          :loading="isSaving"
+          :disabled="isSaving"
+          size="sm"
+          @click="toggleSaved"
+        >
+          {{ isSaved ? 'Saved' : 'Save Job' }}
+        </UButton>
          <div class="mt-6">
       <UButton
         v-if="applyLink"
-        :to="applyLink"
-        :target="applyLink && !applyLink.startsWith('mailto:') ? '_blank' : undefined"
         block
         size="lg"
         color="primary"
+        @click="submitApplication"
       >
         Submit Application
       </UButton>
@@ -93,6 +170,49 @@ const applyLink = computed(() => {
       <UButton v-else block size="lg" color="secondary" variant="outline" disabled>
         No apply link available
       </UButton>
+
+      <div
+        v-if="showApplicationPrompt"
+        class="mt-3 rounded-lg border border-muted bg-elevated/50 p-3 text-left"
+      >
+        <div class="flex items-start gap-3">
+          <UIcon name="i-lucide-circle-help" class="mt-0.5 size-5 text-primary" />
+          <div class="min-w-0 flex-1">
+            <p class="font-medium text-default">Did you apply?</p>
+            <p class="mt-1 text-sm text-muted">
+              Track this application so you can follow up later.
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <UButton
+                size="sm"
+                icon="i-lucide-clipboard-check"
+                :loading="isApplying"
+                :disabled="isApplying"
+                @click="confirmApplied"
+              >
+                Yes, I applied
+              </UButton>
+              <UButton
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                :disabled="isApplying"
+                @click="dismissApplicationPrompt"
+              >
+                Not yet
+              </UButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-else-if="selectedJob.id && isApplied"
+        class="mt-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary"
+      >
+        <UIcon name="i-lucide-clipboard-check" class="size-4" />
+        <span class="font-medium">Application tracked</span>
+      </div>
     </div>
        
 

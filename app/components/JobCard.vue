@@ -44,6 +44,17 @@
              <div>
               <span v-if="job.verified" class="text-blue-500 ml-2">Verified</span>
              </div>
+             <UButton
+               :aria-label="isSaved(job.id) ? 'Remove saved job' : 'Save job'"
+               :icon="isSaved(job.id) ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
+               :color="isSaved(job.id) ? 'primary' : 'neutral'"
+               :variant="isSaved(job.id) ? 'solid' : 'outline'"
+               :loading="isSaving(job.id)"
+               :disabled="isSaving(job.id)"
+               size="sm"
+               square
+               @click.stop="toggleSaved(job.id)"
+             />
              
             </div>
           </div>
@@ -76,6 +87,7 @@
     </UCard>
     <div class="flex justify-center">
       <UPagination
+    v-if="showPagination"
     v-model:page="page"
     :items-per-page="itemsPerPage"
     active-color="primary"
@@ -84,7 +96,7 @@
   </div>
   </div>
   <div v-else class="text-center py-10 text-gray-500">
-    No jobs found matching the selected criteria.
+    {{ emptyMessage }}
   </div>
 </template>
 
@@ -97,11 +109,27 @@ const { $supabase } = useNuxtApp()
 const props = defineProps({
   job: {
     type: Object,
-    required: true
+    default: () => ({})
+  },
+  jobs: {
+    type: Array,
+    default: null
   },
   filters: {
     type: Object,
     default: () => ({})
+  },
+  fetchOnMount: {
+    type: Boolean,
+    default: true
+  },
+  showPagination: {
+    type: Boolean,
+    default: true
+  },
+  emptyMessage: {
+    type: String,
+    default: 'No jobs found matching the selected criteria.'
   }
 })
 
@@ -109,8 +137,10 @@ const props = defineProps({
 
 //data & store usage
 const jobStore = useJobStore()
-const jobs = computed<Job[]>(() => jobStore.jobList || [])
-const loading = ref(true)
+const jobs = computed<Job[]>(() => {
+  return Array.isArray(props.jobs) ? props.jobs as Job[] : jobStore.jobList || []
+})
+const loading = ref(props.fetchOnMount)
 const page = ref(1)
 
 const itemsPerPage = ref(50)
@@ -192,6 +222,15 @@ const selectJob = (job: Job) => {
     jobStore.selectedJob = job
   }
 }
+const isSaved = (jobId?: string) => {
+  return jobStore.isJobSaved(jobId)
+}
+const isSaving = (jobId?: string) => {
+  return jobStore.isSavingJob(jobId)
+}
+const toggleSaved = async (jobId?: string) => {
+  await jobStore.toggleSavedJob(jobId)
+}
 const fetchJobs = async () => {
   loading.value = true
   try {
@@ -217,10 +256,18 @@ const fetchJobs = async () => {
 }
 //hooks: fetch jobs and store into jobStore.jobList (keeps existing behavior)
 onMounted(async()=>{
-  fetchJobs()
+  if (props.fetchOnMount) {
+    fetchJobs()
+  } else {
+    loading.value = false
+  }
+
+  jobStore.fetchSavedJobIds()
 })
 
 watch([page, itemsPerPage], () => {
-  fetchJobs()
+  if (props.fetchOnMount) {
+    fetchJobs()
+  }
 })
 </script>

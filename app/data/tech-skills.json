@@ -1,0 +1,190 @@
+[
+  {
+    "category": "Frontend",
+    "skills": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Next.js",
+      "Angular",
+      "Vue",
+      "Nuxt",
+      "Svelte",
+      "Tailwind CSS",
+      "Bootstrap",
+      "Redux",
+      "Pinia",
+      "GraphQL",
+      "Apollo Client",
+      "Vite",
+      "Webpack"
+    ]
+  },
+  {
+    "category": "Backend",
+    "skills": [
+      "Node.js",
+      "Express.js",
+      "NestJS",
+      "Python",
+      "Django",
+      "Flask",
+      "FastAPI",
+      "Java",
+      "Spring Boot",
+      "C#",
+      ".NET",
+      "PHP",
+      "Laravel",
+      "Ruby on Rails",
+      "Go",
+      "REST APIs",
+      "Microservices",
+      "Authentication",
+      "OAuth"
+    ]
+  },
+  {
+    "category": "Mobile",
+    "skills": [
+      "React Native",
+      "Flutter",
+      "Dart",
+      "Swift",
+      "SwiftUI",
+      "Kotlin",
+      "Android",
+      "iOS",
+      "Expo"
+    ]
+  },
+  {
+    "category": "Databases",
+    "skills": [
+      "PostgreSQL",
+      "MySQL",
+      "Microsoft SQL Server",
+      "MongoDB",
+      "Redis",
+      "SQLite",
+      "Supabase",
+      "Firebase",
+      "Prisma",
+      "Drizzle ORM",
+      "Database Design",
+      "SQL"
+    ]
+  },
+  {
+    "category": "Cloud And DevOps",
+    "skills": [
+      "AWS",
+      "Azure",
+      "Google Cloud",
+      "Docker",
+      "Kubernetes",
+      "GitHub Actions",
+      "GitLab CI",
+      "CI/CD",
+      "Linux",
+      "Nginx",
+      "Terraform",
+      "Vercel",
+      "Netlify",
+      "Cloudflare",
+      "Cloudflare R2"
+    ]
+  },
+  {
+    "category": "Data And AI",
+    "skills": [
+      "Python",
+      "R",
+      "Pandas",
+      "NumPy",
+      "Jupyter",
+      "Power BI",
+      "Tableau",
+      "Excel",
+      "Machine Learning",
+      "TensorFlow",
+      "PyTorch",
+      "Scikit-learn",
+      "OpenAI API",
+      "Prompt Engineering",
+      "Data Analysis",
+      "Data Visualization"
+    ]
+  },
+  {
+    "category": "Design And Product",
+    "skills": [
+      "Figma",
+      "Adobe XD",
+      "UI Design",
+      "UX Design",
+      "Wireframing",
+      "Prototyping",
+      "User Research",
+      "Design Systems",
+      "Product Management",
+      "Agile",
+      "Scrum",
+      "Jira",
+      "Notion"
+    ]
+  },
+  {
+    "category": "IT And Support",
+    "skills": [
+      "Microsoft 365",
+      "Google Workspace",
+      "Active Directory",
+      "Windows Server",
+      "Networking",
+      "DNS",
+      "DHCP",
+      "VPN",
+      "Cybersecurity",
+      "Help Desk",
+      "Technical Support",
+      "IT Asset Management",
+      "SharePoint",
+      "PowerShell"
+    ]
+  },
+  {
+    "category": "QA And Testing",
+    "skills": [
+      "Manual Testing",
+      "Automated Testing",
+      "Unit Testing",
+      "Integration Testing",
+      "End-to-End Testing",
+      "Jest",
+      "Vitest",
+      "Cypress",
+      "Playwright",
+      "Selenium",
+      "Postman",
+      "API Testing",
+      "Test Planning"
+    ]
+  },
+  {
+    "category": "Security",
+    "skills": [
+      "Application Security",
+      "Network Security",
+      "Penetration Testing",
+      "Vulnerability Assessment",
+      "OWASP",
+      "SIEM",
+      "SOC",
+      "Incident Response",
+      "Identity and Access Management"
+    ]
+  }
+]

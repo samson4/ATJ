@@ -51,6 +51,18 @@ const selectJob = (job: Job) => {
 
 const selectedJob = computed(() => jobStore.selectedJob)
 
+const isSaved = (jobId?: string) => {
+  return jobStore.isJobSaved(jobId)
+}
+
+const isSaving = (jobId?: string) => {
+  return jobStore.isSavingJob(jobId)
+}
+
+const toggleSaved = async (jobId?: string) => {
+  await jobStore.toggleSavedJob(jobId)
+}
+
 
 watch(open, (val) => {
   if (!val) {
@@ -157,9 +169,12 @@ const fetchJobs = async()=>{
     loading.value = false
   }
 }
+
 //hooks
 onMounted(() => {
   fetchJobs()
+  jobStore.fetchSavedJobIds()
+  jobStore.fetchAppliedJobIds()
 })
 </script>
 
@@ -207,6 +222,17 @@ onMounted(() => {
              <div>
               <span v-if="job.verified" class="text-blue-500 ml-2">Verified</span>
              </div>
+             <UButton
+               :aria-label="isSaved(job.id) ? 'Remove saved job' : 'Save job'"
+               :icon="isSaved(job.id) ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
+               :color="isSaved(job.id) ? 'primary' : 'neutral'"
+               :variant="isSaved(job.id) ? 'solid' : 'outline'"
+               :loading="isSaving(job.id)"
+               :disabled="isSaving(job.id)"
+               size="sm"
+               square
+               @click.stop="toggleSaved(job.id)"
+             />
              
             </div>
           </div>

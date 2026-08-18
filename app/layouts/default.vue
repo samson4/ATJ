@@ -53,14 +53,17 @@
 <script setup lang="ts">
 //init
 import { useAuthStore } from "~/stores/auth"
+import { useJobStore } from "~/stores/job"
 const { $supabase } = useNuxtApp();
 const router = useRouter();
 
 //data
 const authStore = useAuthStore()
+const jobStore = useJobStore()
 const authUser = ref(null);
 const items = ref([
   { label: "Profile", icon: "lucide:user", to: "/profile" },
+  { label: "Saved Jobs", icon: "i-lucide-bookmark", to: "/saved-jobs" },
   {
     label: "Sign Out",
     icon: "lucide:log-out",
@@ -78,6 +81,8 @@ onMounted(async () => {
   if (user) {
     authUser.value = user;
     authStore.user = user
+    jobStore.fetchSavedJobIds()
+    jobStore.fetchAppliedJobIds()
     console.log("auth",authStore)
   }
 });
@@ -87,7 +92,9 @@ onMounted(async () => {
 const signOut = async () => {
   let { error } = await $supabase.auth.signOut();
   authStore.user = {}
-  authStore.authenticated_user = {}
+  authUser.value = null
+  jobStore.clearSavedJobs()
+  jobStore.clearAppliedJobs()
   if (error) throw error;
   router.push("/auth/signin");
 };
