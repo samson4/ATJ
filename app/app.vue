@@ -19,10 +19,10 @@ useSeoMeta({
   description,
   ogTitle: title,
   ogDescription: description,
-  ogImage: '/public/logo.png',
+  ogImage: 'https://www.addistechjobs.work/logo.png',
   twitterTitle: title,
   twitterDescription: description,
-  twitterImage: '/public/logo.png',
+  twitterImage: 'https://www.addistechjobs.work/logo.png',
   twitterCard: 'summary_large_image'
 })
 definePageMeta({
