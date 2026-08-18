@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/ui', '@nuxt/content', '@pinia/nuxt', 'nuxt-studio'],
+  modules: ['@nuxt/ui', '@nuxt/content', '@pinia/nuxt', 'nuxt-studio', '@vercel/analytics'],
   studio: {
     repository: {
       provider: 'github', // 'github' or 'gitlab'

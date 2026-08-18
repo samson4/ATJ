@@ -2183,6 +2183,11 @@
     hookable "^5.5.3"
     unhead "2.0.19"
 
+"@vercel/analytics@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@vercel/analytics/-/analytics-2.0.1.tgz#d7d7bd37af7cfbeea95db5f132ae4889f4d26407"
+  integrity sha512-MTQG6V9qQrt1tsDeF+2Uoo5aPjqbVPys1xvnIftXSJYG2SrwXRHnqEvVoYID7BTruDz4lCd2Z7rM1BdkUehk2g==
+
 "@vercel/nft@^0.30.3":
   version "0.30.3"
   resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.30.3.tgz#ab09a7f22ec7b354fcbe2d79f3d8c0c8adfbcc89"
