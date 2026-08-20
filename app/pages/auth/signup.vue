@@ -7,6 +7,9 @@ const envConfig = useRuntimeConfig();
 definePageMeta({
   layout: "auth"
 });
+useSeoMeta({
+  robots: 'noindex, nofollow'
+})
 const toast = useToast();
 
 const fields: AuthFormField[] = [

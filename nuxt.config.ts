@@ -2,7 +2,24 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/ui', '@nuxt/content', '@pinia/nuxt', 'nuxt-studio', '@vercel/analytics'],
+  modules: ['@nuxt/ui', '@nuxt/content', '@pinia/nuxt', 'nuxt-studio', '@vercel/analytics', '@nuxtjs/sitemap'],
+  site: {
+    url: 'https://addistechjobs.work',
+    name: 'Addis Tech Jobs'
+  },
+  sitemap: {
+    urls: [
+      '/',
+      '/companies'
+    ],
+    exclude: [
+      '/auth/**',
+      '/profile',
+      '/saved-jobs',
+      '/applications',
+      '/company/**'
+    ]
+  },
   studio: {
     repository: {
       provider: 'github', // 'github' or 'gitlab'

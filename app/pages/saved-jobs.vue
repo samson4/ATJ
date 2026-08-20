@@ -106,6 +106,9 @@ definePageMeta({
   layout: 'default',
   middleware: 'auth'
 })
+useSeoMeta({
+  robots: 'noindex, nofollow'
+})
 
 const jobStore = useJobStore()
 const detailOpen = ref(false)

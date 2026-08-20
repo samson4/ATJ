@@ -20,6 +20,13 @@
 import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
 import * as z from 'zod'
 
+definePageMeta({
+  layout: "auth"
+})
+useSeoMeta({
+  robots: 'noindex, nofollow'
+})
+
 const { $supabase } = useNuxtApp();
 const router = useRouter()
 const toast = useToast()

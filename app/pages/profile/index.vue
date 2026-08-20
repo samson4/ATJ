@@ -53,6 +53,50 @@
             class="space-y-8"
             @submit="saveProfile"
           >
+            <section class="space-y-4 rounded-lg border border-muted p-4">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                   
+                    <h3 class="font-semibold text-highlighted">
+                      Profile Completeness
+                    </h3>
+                  </div>
+                  <p class="text-sm text-muted">
+                    {{ profileCompletenessMessage }}
+                  </p>
+                </div>
+
+                <UBadge
+                  :label="`${profileCompletenessPercent}% complete`"
+                  :color="profileCompletenessColor"
+                  variant="subtle"
+                  size="lg"
+                  class="w-fit"
+                />
+              </div>
+
+              <UProgress
+                :model-value="profileCompletenessPercent"
+                :max="100"
+                :color="profileCompletenessColor"
+                size="md"
+              />
+
+              <div
+                v-if="missingProfileItems.length"
+                class="flex flex-wrap gap-2"
+              >
+                <UBadge
+                  v-for="item in missingProfileItems"
+                  :key="item"
+                  :label="item"
+                  color="neutral"
+                  variant="outline"
+                />
+              </div>
+            </section>
+
             <section class="flex flex-col gap-5 rounded-lg bg-elevated/50 p-4 sm:flex-row sm:items-center">
               <button
                 type="button"
@@ -538,6 +582,9 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import techSkillsData from '~/data/tech-skills.json'
 
 definePageMeta({ layout: 'default', middleware: 'auth' })
+useSeoMeta({
+  robots: 'noindex, nofollow'
+})
 
 type ExperienceItem = {
   title: string
@@ -569,6 +616,11 @@ type SkillGroup = {
 type SkillMenuItem =
   | { type: 'label', label: string }
   | { label: string, value: string, description: string }
+
+type CompletionItem = {
+  label: string
+  complete: boolean
+}
 
 const optionalUrl = z
   .string()
@@ -669,6 +721,67 @@ const hasChanges = computed(() =>
   hasPendingAvatarChange.value ||
   hasPendingCvChange.value
 )
+const profileCompletionItems = computed<CompletionItem[]>(() => [
+  {
+    label: 'Photo',
+    complete: !!avatarPreview.value || !!existingAvatarUrl.value || !!state.avatar_file_path
+  },
+  {
+    label: 'Full name',
+    complete: !!state.full_name.trim()
+  },
+  {
+    label: 'Bio',
+    complete: state.bio.trim().length >= 40
+  },
+  {
+    label: 'Skills',
+    complete: normalizeSkills(state.skills).length >= 3
+  },
+  {
+    label: 'Experience',
+    complete: cleanExperience(state.experience).length > 0
+  },
+  {
+    label: 'Education',
+    complete: cleanEducation(state.education).length > 0
+  },
+  {
+    label: 'CV',
+    complete: !!state.cv_file_name || !!state.cv_file_path || !!selectedCvFile.value
+  },
+  {
+    label: 'Links',
+    complete: hasExternalLink()
+  }
+])
+const completedProfileItems = computed(() =>
+  profileCompletionItems.value.filter((item) => item.complete)
+)
+const missingProfileItems = computed(() =>
+  profileCompletionItems.value
+    .filter((item) => !item.complete)
+    .map((item) => item.label)
+)
+const profileCompletenessPercent = computed(() =>
+  Math.round((completedProfileItems.value.length / profileCompletionItems.value.length) * 100)
+)
+const profileCompletenessColor = computed(() => {
+  if (profileCompletenessPercent.value >= 80) return 'success'
+  if (profileCompletenessPercent.value >= 50) return 'primary'
+  return 'warning'
+})
+const profileCompletenessMessage = computed(() => {
+  if (profileCompletenessPercent.value === 100) {
+    return 'Your candidate profile has the essentials employers expect.'
+  }
+
+  if (missingProfileItems.value.length <= 2) {
+    return 'Almost there. A couple more details will make your profile stronger.'
+  }
+
+  return 'Complete the essentials so employers get a clearer picture of your background.'
+})
 const avatarInitials = computed(() => {
   const name = state.full_name.trim()
 
@@ -1267,6 +1380,14 @@ function normalizePortfolioLinks(items: PortfolioLink[] = []) {
 
 function cleanPortfolioLinks(items: PortfolioLink[] = []) {
   return normalizePortfolioLinks(items).filter((item) => item.label || item.url)
+}
+
+function hasExternalLink() {
+  return Boolean(
+    state.github_url.trim() ||
+    state.linkedin_url.trim() ||
+    cleanPortfolioLinks(state.portfolio_links).length
+  )
 }
 
 function nullIfBlank(value: string) {

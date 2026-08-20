@@ -1,2 +1,9 @@
 User-Agent: *
 Disallow:
+Disallow: /auth/
+Disallow: /profile
+Disallow: /saved-jobs
+Disallow: /applications
+Disallow: /company/
+
+Sitemap: https://addistechjobs.work/sitemap.xml

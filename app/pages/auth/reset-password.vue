@@ -21,6 +21,9 @@ import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
 definePageMeta({
   layout: "auth"
 })
+useSeoMeta({
+  robots: 'noindex, nofollow'
+})
 const { $supabase } = useNuxtApp();
 const toast = useToast()
 const schema = z.object({

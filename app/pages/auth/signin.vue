@@ -3,6 +3,9 @@
 definePageMeta({
   layout:"auth"
 })
+useSeoMeta({
+  robots: 'noindex, nofollow'
+})
 import * as z from 'zod'
 import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
 const { $supabase } = useNuxtApp()
@@ -120,4 +123,3 @@ router.push("/")
         <ULink class="flex flex-col justify-center"  to="/auth/signup">Or Create an account.</ULink>
      </div>   
 </template>
-

@@ -37,7 +37,7 @@
       <UColorModeButton />
     </template>
   </UHeader>
-  <UMain class="flex flex-col gap-6 mx-12">
+  <UMain class="flex flex-col gap-4 mx-12">
     <slot />
   </UMain>
   <USeparator />
