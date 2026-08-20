@@ -31,9 +31,9 @@
           <div class="min-w-0 space-y-3">
             <div class="space-y-2">
               <div class="flex flex-wrap items-center gap-2">
-                <h1 class="text-3xl font-bold text-highlighted">
+                <NuxtLink class="text-sm text-primary-600 font-medium">
                   {{ company.name }}
-                </h1>
+                </NuxtLink>
                 <UBadge v-if="company.industry" color="primary" variant="soft">
                   {{ company.industry }}
                 </UBadge>

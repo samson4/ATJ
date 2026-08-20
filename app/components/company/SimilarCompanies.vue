@@ -62,9 +62,9 @@
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <h3 class="truncate font-semibold text-highlighted">
+                    <NuxtLink class="text-sm text-primary-600 font-medium">
                       {{ item.company_name }}
-                    </h3>
+                    </NuxtLink>
                     <p class="mt-1 text-sm text-muted">
                       {{ item.industry || item.headquarters || 'Company profile' }}
                     </p>
