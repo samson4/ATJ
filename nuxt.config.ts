@@ -15,6 +15,7 @@ export default defineNuxtConfig({
     exclude: [
       '/auth/**',
       '/profile',
+      '/security',
       '/saved-jobs',
       '/applications',
       '/company/**'
@@ -34,6 +35,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css','@tailwindcss/typography'],
   plugins:["~/plugins/supabase.ts"],
   runtimeConfig: {
+    SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
     public: {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,

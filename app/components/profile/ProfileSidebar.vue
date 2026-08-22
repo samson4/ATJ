@@ -1,9 +1,11 @@
 <script setup lang="ts">
+type SidebarItem = 'profile' | 'applications' | 'savedJobs' | 'security'
+
 const props = defineProps<{
-  active: 'profile' | 'applications' | 'savedJobs'
+  active: SidebarItem
 }>()
 
-const itemClasses = (key: 'profile' | 'applications' | 'savedJobs') => {
+const itemClasses = (key: SidebarItem) => {
   if (props.active === key) {
     return 'flex items-center space-x-3 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800'
   }
@@ -11,7 +13,7 @@ const itemClasses = (key: 'profile' | 'applications' | 'savedJobs') => {
   return 'flex items-center space-x-3 p-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors'
 }
 
-const textClasses = (key: 'profile' | 'applications' | 'savedJobs') => {
+const textClasses = (key: SidebarItem) => {
   if (props.active === key) {
     return 'font-medium text-primary-700 dark:text-primary-300'
   }
@@ -19,7 +21,7 @@ const textClasses = (key: 'profile' | 'applications' | 'savedJobs') => {
   return ''
 }
 
-const iconClasses = (key: 'profile' | 'applications' | 'savedJobs') => {
+const iconClasses = (key: SidebarItem) => {
   if (props.active === key) {
     return 'w-5 h-5 text-primary-600 dark:text-primary-400'
   }
@@ -54,13 +56,10 @@ const iconClasses = (key: 'profile' | 'applications' | 'savedJobs') => {
         <span>Account</span>
       </a>
 
-      <a
-        href="#"
-        class="flex items-center space-x-3 p-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-      >
-        <UIcon name="i-heroicons-shield-check" class="w-5 h-5" />
-        <span>Security</span>
-      </a>
+      <NuxtLink to="/security" :class="itemClasses('security')">
+        <UIcon name="i-heroicons-shield-check" :class="iconClasses('security')" />
+        <span :class="textClasses('security')">Security</span>
+      </NuxtLink>
     </nav>
   </UCard>
 </template>
