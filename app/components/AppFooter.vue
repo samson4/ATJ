@@ -2,15 +2,15 @@
 const year = new Date().getFullYear()
 const linkedinUrl = 'https://et.linkedin.com/company/addis-tech-jobs'
 
-const exploreLinks = [
-  { label: 'Jobs', to: '/' },
-  { label: 'Companies', to: '/companies' },
-  { label: 'Sign In', to: '/auth/signin' },
-  { label: 'Sign Up', to: '/auth/signup' }
-]
+// const exploreLinks = [
+//   { label: 'Jobs', to: '/' },
+//   { label: 'Companies', to: '/companies' },
+//   { label: 'Sign In', to: '/auth/signin' },
+//   { label: 'Sign Up', to: '/auth/signup' }
+// ]
 
 const supportLinks = [
-  { label: 'Contact', to: '/contact' },
+  // { label: 'Contact', to: '/contact' },
   { label: 'About', to: '/about' }
 ]
 
@@ -38,7 +38,7 @@ const legalLinks = [
           </p>
         </div>
 
-        <nav aria-labelledby="footer-explore" class="space-y-3">
+        <!-- <nav aria-labelledby="footer-explore" class="space-y-3">
           <h2 id="footer-explore" class="text-sm font-semibold text-highlighted">
             Explore
           </h2>
@@ -49,7 +49,7 @@ const legalLinks = [
               </NuxtLink>
             </li>
           </ul>
-        </nav>
+        </nav> -->
 
         <nav aria-labelledby="footer-support" class="space-y-3">
           <h2 id="footer-support" class="text-sm font-semibold text-highlighted">
