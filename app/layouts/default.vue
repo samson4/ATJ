@@ -40,14 +40,7 @@
   <UMain class="flex flex-col gap-4 mx-12">
     <slot />
   </UMain>
-  <USeparator />
-  <UFooter>
-    <template #default>
-      <p class="text-sm text-muted">
-        Addis Tech Jobs • © {{ new Date().getFullYear() }}
-      </p>
-    </template>
-  </UFooter>
+  <AppFooter />
 </template>
 
 <script setup lang="ts">

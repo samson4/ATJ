@@ -10,7 +10,11 @@ export default defineNuxtConfig({
   sitemap: {
     urls: [
       '/',
-      '/companies'
+      '/companies',
+      '/about',
+      '/contact',
+      '/privacy',
+      '/terms'
     ],
     exclude: [
       '/auth/**',

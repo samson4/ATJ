@@ -18,13 +18,5 @@
     <slot />
   </UMain>
 
-  <USeparator />
-
-  <UFooter>
-    <template #left>
-      <p class="text-sm text-muted">
-        Addis Tech Jobs • © {{ new Date().getFullYear() }}
-      </p>
-    </template>
-  </UFooter>
+  <AppFooter />
 </template>
