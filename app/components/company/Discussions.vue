@@ -16,8 +16,8 @@
 
       <div class="flex items-start gap-3">
         <UAvatar 
-          :src="currentUser?.user_metadata.avatar_url || '/default-avatar.png'" 
-          :alt="currentUser?.user_metadata.full_name || 'User'" 
+          :src="currentUser?.user_metadata?.avatar_url || '/default-avatar.png'" 
+          :alt="currentUser?.user_metadata?.full_name || 'User'" 
           size="md" 
         />
         <div class="flex-1 space-y-3">
@@ -102,7 +102,7 @@
               
               <div class="flex items-center gap-2">
                 <UButton
-                 v-if="currentUser?.id === discussion.user_id"
+                 v-if="isOwnDiscussion(discussion)"
                   color="primary" 
                   variant="ghost" 
                   icon="i-heroicons-pencil"
@@ -110,7 +110,7 @@
                   @click="editQuestion(discussion.id)"
                 />
                 <UButton 
-                  v-if="currentUser?.id === discussion.user_id"
+                  v-if="isOwnDiscussion(discussion)"
                   color="neutral" 
                   variant="ghost" 
                   icon="i-heroicons-trash"
@@ -250,11 +250,15 @@ const discussions = ref<any[]>([])
 const newQuestion = ref('')
 const loading = ref(true)
 const authStore = useAuthStore()
-const currentUser = ref(authStore.authenticated_user)
+const currentUser = computed(() => authStore.authenticated_user)
 const page = ref(1)
 const itemsPerPage = ref(50)
 const totalDiscussions = ref(0)
 const editingDiscussionId = ref<string | null>(null)
+
+const isOwnDiscussion = (discussion: any) => {
+  return Boolean(currentUser.value?.id && discussion?.user_id && String(currentUser.value.id) === String(discussion.user_id))
+}
 // Fetch discussions
 const fetchDiscussions = async () => {
   const from = (page.value - 1) * itemsPerPage.value
@@ -283,7 +287,7 @@ const fetchDiscussions = async () => {
 
 // Submit a new question
 const submitQuestion = async () => {
-  if (!newQuestion.value.trim()) return
+  if (!newQuestion.value.trim() || !currentUser.value?.id) return
 
   try {
     const { data, error } = await $supabase
@@ -307,7 +311,7 @@ const submitQuestion = async () => {
 
 // Submit an answer
 const submitAnswer = async (discussionId: string, answerContent: string) => {
-  if (!answerContent.trim()) return
+  if (!answerContent.trim() || !currentUser.value?.id) return
 
   try {
     const { data, error } = await $supabase
@@ -334,12 +338,15 @@ const editQuestion = async (discussionId: string) => {
   editingDiscussionId.value = discussionId
 }
 const saveEditedQuestion = async (discussionId: string, updatedContent: string) => {
+  if (!currentUser.value?.id) return
+
   try {
     const { error } = await $supabase
       .schema("companies")
       .from('discussions')
       .update({ content: updatedContent })
       .eq('id', discussionId)
+      .eq('user_id', currentUser.value.id)
 
     if (error) throw error
     editingDiscussionId.value = null
@@ -352,7 +359,7 @@ const saveEditedQuestion = async (discussionId: string, updatedContent: string) 
 
 // Delete a question
 const deleteQuestion = async (discussionId: string) => {
- 
+  if (!currentUser.value?.id) return
 
   try {
     const { error } = await $supabase
@@ -360,6 +367,7 @@ const deleteQuestion = async (discussionId: string) => {
       .from('discussions')
       .delete()
       .eq('id', discussionId)
+      .eq('user_id', currentUser.value.id)
 
     if (error) throw error
     toast.add({
