@@ -4,6 +4,12 @@ import { useJobStore } from "~/stores/job";
 import { computed, ref, watch } from 'vue';
 import type { Job } from '~/interfaces/jobInterface'
 
+withDefaults(defineProps<{
+  fullHeight?: boolean
+}>(), {
+  fullHeight: true
+})
+
 const jobStore = useJobStore();
 const selectedJob = computed<Job>(() => jobStore.selectedJob || ({} as Job));
 
@@ -116,7 +122,10 @@ watch(() => selectedJob.value?.id, () => {
 </script>
 
 <template>
-  <UCard :ui="{ body: { padding: 'sm:p-6' } }" class="h-screen overflow-y-auto">
+  <UCard
+    :ui="{ body: { padding: 'sm:p-6' } }"
+    :class="fullHeight ? 'h-screen overflow-y-auto' : 'h-full min-h-0 overflow-visible rounded-none ring-0 shadow-none'"
+  >
     <!-- Header -->
      <template #header>
       

@@ -1,5 +1,5 @@
 <template>
-  <UHeader>
+  <UHeader :toggle="false">
     <template #left>
       <NuxtLink v-if="authUser" to="/"
         ><AppLogo class="w-auto h-12 "/>

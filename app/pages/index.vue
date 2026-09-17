@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { sub, format, isSameDay } from 'date-fns' // formatting tools
 import { useJobStore } from "~/stores/job"
 
@@ -85,8 +85,33 @@ const dateLabel = computed(() => {
 
 
 const selectedJob = computed(() => jobStore.selectedJob)
+const isMobile = ref(false)
+let mobileMediaQuery: MediaQueryList | null = null
+
+const syncMobileView = () => {
+  isMobile.value = mobileMediaQuery?.matches ?? false
+}
+
+const jobDetailDrawerOpen = computed({
+  get: () => !!selectedJob.value?.id,
+  set: (open) => {
+    if (!open) {
+      jobStore.selectedJob = {}
+    }
+  }
+})
 
 definePageMeta({ layout: 'default' })
+
+onMounted(() => {
+  mobileMediaQuery = window.matchMedia('(max-width: 767px)')
+  syncMobileView()
+  mobileMediaQuery.addEventListener('change', syncMobileView)
+})
+
+onBeforeUnmount(() => {
+  mobileMediaQuery?.removeEventListener('change', syncMobileView)
+})
 
 // --- Methods ---
 
@@ -157,8 +182,10 @@ const searchJobs = async () => {
 
 <template>
   <div>
-  <UPageHero :title="page?.title"
-  :description="page?.description"
+  <UPageHero
+    class="hidden md:block"
+    :title="page?.title"
+    :description="page?.description"
   />
     <div
       style="background-image: url('atj.jpeg');"
@@ -302,14 +329,14 @@ const searchJobs = async () => {
       </div>
     </div>
     
-    <div class="w-full flex gap-6 my-6" :class="{ 'justify-center': !selectedJob?.id }">
+    <div class="w-full md:flex gap-6 my-6" :class="{ 'md:justify-center': !selectedJob?.id }">
       <UDashboardPanel
         class="transition-all duration-500"
         :resizable="!!selectedJob?.id"
         :min-size="22"
         :default-size="35"
         :max-size="40"
-        :class="[!selectedJob?.id ? 'w-full max-w-3xl' : 'h-screen overflow-y-auto']"
+        :class="[!selectedJob?.id ? 'w-full md:max-w-3xl' : 'w-full md:h-screen md:overflow-y-auto']"
       >
         <JobCard /> 
       </UDashboardPanel>
@@ -320,18 +347,36 @@ const searchJobs = async () => {
         leave-active-class="transition-opacity duration-500"
         leave-to-class="opacity-0"
       >
-        <div v-if="selectedJob && selectedJob.id" class="flex-1">
-          <JobDetail @close="selectedJob = null" />
+        <div v-if="selectedJob && selectedJob.id" class="hidden md:block flex-1">
+          <JobDetail />
         </div>
       </Transition>
     </div>
 
     <ClientOnly>
-      <USlideover v-if="isMobile && selectedJob && selectedJob.id">
-        <template #content>
-          <JobDetail @close="selectedJob = null" />
+      <UDrawer
+        v-if="isMobile"
+        v-model:open="jobDetailDrawerOpen"
+        title="Job details"
+        close-icon="i-lucide-x"
+        :close="{
+          color: 'primary',
+          variant: 'outline',
+          class: 'rounded-full'
+        }"
+        :dismissible="false"
+        :handle="false"
+        :ui="{
+          content: 'h-[88dvh] max-h-[88dvh]',
+          container: 'h-full min-h-0 gap-0 overflow-hidden p-0',
+          header: 'border-b border-muted px-4 py-3',
+          body: 'min-h-0 flex-1 overflow-y-auto p-0'
+        }"
+      >
+        <template #body>
+          <JobDetail v-if="selectedJob?.id" :full-height="false" />
         </template>
-      </USlideover>
+      </UDrawer>
     </ClientOnly>
   </div>
 </template>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { marked } from 'marked';
-import JobDetail from '~/components/JobDetail.vue'
 import type { Job } from '~/interfaces/jobInterface'
 
 const props = defineProps({
@@ -15,13 +14,12 @@ const props = defineProps({
   }
 })
 
-const overlay = useOverlay()
 const open = ref(false)
-async function openModal(job: Job) {
-  const modal = overlay.create(JobDetail, {
-    job: job
-  })
-  modal.open()
+const isMobile = ref(false)
+let mobileMediaQuery: MediaQueryList | null = null
+
+const syncMobileView = () => {
+  isMobile.value = mobileMediaQuery?.matches ?? false
 }
 
 const { $supabase } = useNuxtApp()
@@ -74,12 +72,6 @@ watch(open, (val) => {
 watch([page, itemsPerPage], () => {
   fetchJobs()
 })
-
-const closeSlideOver = () => {
-  open.value = false
-  jobStore.selectedJob = {}
-}
-
 
 const visibleTags = (job: Job) => {
   const t = job.tags || []
@@ -172,9 +164,17 @@ const fetchJobs = async()=>{
 
 //hooks
 onMounted(() => {
+  mobileMediaQuery = window.matchMedia('(max-width: 767px)')
+  syncMobileView()
+  mobileMediaQuery.addEventListener('change', syncMobileView)
+
   fetchJobs()
   jobStore.fetchSavedJobIds()
   jobStore.fetchAppliedJobIds()
+})
+
+onBeforeUnmount(() => {
+  mobileMediaQuery?.removeEventListener('change', syncMobileView)
 })
 </script>
 
@@ -263,24 +263,50 @@ onMounted(() => {
           </div>
           </template>
     </UCard>
-      <USlideover 
-      v-model:open="open"
-      class="max-w-2xl"
-     
-    >
-      <template #content>
-        <Transition
-          enter-active-class="transition-opacity duration-500"
-          enter-from-class="opacity-0"
-          leave-active-class="transition-opacity duration-500"
-          leave-to-class="opacity-0"
-        >
-          <div v-if="selectedJob && selectedJob.id" class="h-full">
-            <JobDetail @close="closeSlideOver" />
-          </div>
-        </Transition>
-      </template>
-    </USlideover>
+    <ClientOnly>
+      <USlideover
+        v-if="!isMobile"
+        v-model:open="open"
+        class="max-w-2xl"
+      >
+        <template #content>
+          <Transition
+            enter-active-class="transition-opacity duration-500"
+            enter-from-class="opacity-0"
+            leave-active-class="transition-opacity duration-500"
+            leave-to-class="opacity-0"
+          >
+            <div v-if="selectedJob?.id" class="h-full">
+              <JobDetail />
+            </div>
+          </Transition>
+        </template>
+      </USlideover>
+
+      <UDrawer
+        v-if="isMobile"
+        v-model:open="open"
+        title="Job details"
+        close-icon="i-lucide-x"
+        :close="{
+          color: 'primary',
+          variant: 'outline',
+          class: 'rounded-full'
+        }"
+        :dismissible="false"
+        :handle="false"
+        :ui="{
+          content: 'h-[88dvh] max-h-[88dvh]',
+          container: 'h-full min-h-0 gap-0 overflow-hidden p-0',
+          header: 'border-b border-muted px-4 py-3',
+          body: 'min-h-0 flex-1 overflow-y-auto p-0'
+        }"
+      >
+        <template #body>
+          <JobDetail v-if="selectedJob?.id" :full-height="false" />
+        </template>
+      </UDrawer>
+    </ClientOnly>
      <div class="flex justify-center my-4">
       <UPagination
     v-model:page="page"
