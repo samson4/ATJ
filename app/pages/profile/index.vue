@@ -557,6 +557,7 @@
                 color="neutral"
                 variant="outline"
                 size="lg"
+                class="w-full justify-center sm:w-auto"
                 :disabled="saving"
                 @click="resetForm"
               />
@@ -566,6 +567,7 @@
                 :loading="saving"
                 size="lg"
                 icon="i-lucide-check"
+                class="w-full justify-center sm:w-auto"
                 :disabled="!hasChanges"
               />
             </div>

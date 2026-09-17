@@ -17,7 +17,7 @@
   </UCard>
 
   <UCard v-else-if="company">
-    <div class="space-y-8">
+    <div class="space-y-6">
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
           <UAvatar
@@ -39,9 +39,22 @@
                 </UBadge>
               </div>
 
-              <p class="max-w-3xl text-sm leading-6 text-toned sm:text-base">
-                {{ company.description || 'Company overview is not available yet.' }}
+              <p
+                class="max-w-3xl text-sm leading-6 text-toned sm:text-base"
+                :class="{ 'line-clamp-3 sm:line-clamp-4': shouldShowDescriptionToggle && !descriptionExpanded }"
+              >
+                {{ companyDescription }}
               </p>
+              <UButton
+                v-if="shouldShowDescriptionToggle"
+                color="primary"
+                variant="link"
+                size="sm"
+                class="h-auto p-0"
+                @click="descriptionExpanded = !descriptionExpanded"
+              >
+                {{ descriptionExpanded ? 'Less' : 'More...' }}
+              </UButton>
             </div>
 
           </div>
@@ -79,17 +92,17 @@
         </div>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <div
           v-for="stat in statCards"
           :key="stat.label"
-          class="rounded-md border border-muted bg-muted/40 p-4"
+          class="rounded-md border border-muted bg-muted/30 p-3"
         >
-          <div class="flex items-center gap-2 text-sm text-muted">
-            <UIcon :name="stat.icon" class="size-4" />
+          <div class="flex items-center gap-1.5 text-xs text-muted">
+            <UIcon :name="stat.icon" class="size-3.5" />
             <span>{{ stat.label }}</span>
           </div>
-          <p class="mt-3 text-2xl font-semibold text-highlighted">
+          <p class="mt-1.5 text-sm font-medium text-highlighted">
             {{ stat.value }}
           </p>
         </div>
@@ -101,24 +114,24 @@
           <span>Company snapshot</span>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <dl class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <div
             v-for="fact in companyFacts"
             :key="fact.label"
-            class="rounded-md border border-muted p-4"
+            class="rounded-md border border-muted p-3"
           >
-            <div class="flex items-center gap-2 text-xs font-medium uppercase text-muted">
-              <UIcon :name="fact.icon" class="size-4" />
+            <dt class="flex items-center gap-1.5 text-xs text-muted">
+              <UIcon :name="fact.icon" class="size-3.5" />
               <span>{{ fact.label }}</span>
-            </div>
-            <p class="mt-2 text-sm font-semibold text-highlighted">
+            </dt>
+            <dd class="mt-1.5 text-sm font-medium text-highlighted">
               {{ fact.value }}
-            </p>
+            </dd>
             <p v-if="fact.helper" class="mt-1 text-xs text-muted">
               {{ fact.helper }}
             </p>
           </div>
-        </div>
+        </dl>
       </div>
 
       <div v-if="stats.topTags.length" class="space-y-3">
@@ -163,6 +176,21 @@ const props = withDefaults(defineProps<{
     salaryMax: null,
     salaryCurrency: null
   })
+})
+
+const descriptionExpanded = ref(false)
+const descriptionToggleThreshold = 220
+
+const companyDescription = computed(() => {
+  return props.company?.description?.trim() || 'Company overview is not available yet.'
+})
+
+const shouldShowDescriptionToggle = computed(() => {
+  return (props.company?.description?.trim().length || 0) > descriptionToggleThreshold
+})
+
+watch(() => props.company?.id, () => {
+  descriptionExpanded.value = false
 })
 
 const formatDate = (date?: string | null) => {

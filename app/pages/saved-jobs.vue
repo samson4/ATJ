@@ -76,6 +76,7 @@
                 color="error"
                 variant="outline"
                 size="sm"
+                class="w-full justify-center sm:w-auto"
                 :loading="jobStore.isSavingJob(job.id)"
                 :disabled="jobStore.isSavingJob(job.id)"
                 @click.stop="removeSavedJob(job.id)"
@@ -88,14 +89,42 @@
       </div>
     </div>
 
-    <USlideover
-      v-model:open="detailOpen"
-      class="max-w-2xl"
-    >
-      <template #content>
-        <JobDetail v-if="selectedJob?.id" @close="closeDetail" />
-      </template>
-    </USlideover>
+    <ClientOnly>
+      <USlideover
+        v-if="!isMobile"
+        v-model:open="detailOpen"
+        class="max-w-2xl"
+      >
+        <template #content>
+          <JobDetail v-if="selectedJob?.id" @close="closeDetail" />
+        </template>
+      </USlideover>
+
+      <UDrawer
+        v-if="isMobile"
+        v-model:open="detailOpen"
+        title="Job details"
+        close-icon="i-lucide-x"
+        :close="{
+          color: 'primary',
+          variant: 'outline',
+          class: 'rounded-full'
+        }"
+        :dismissible="false"
+        :handle="false"
+        :modal="true"
+        :ui="{
+          content: 'h-[88dvh] max-h-[88dvh]',
+          container: 'h-full min-h-0 gap-0 overflow-hidden p-0',
+          header: 'border-b border-muted px-4 py-3',
+          body: 'min-h-0 flex-1 overflow-y-auto p-0'
+        }"
+      >
+        <template #body>
+          <JobDetail v-if="selectedJob?.id" :full-height="false" @close="closeDetail" />
+        </template>
+      </UDrawer>
+    </ClientOnly>
   </UContainer>
 </template>
 
@@ -113,10 +142,23 @@ useSeoMeta({
 const jobStore = useJobStore()
 const detailOpen = ref(false)
 const selectedJob = computed(() => jobStore.selectedJob)
+const isMobile = ref(false)
+let mobileMediaQuery: MediaQueryList | null = null
+
+const syncMobileView = () => {
+  isMobile.value = mobileMediaQuery?.matches ?? false
+}
 
 onMounted(async () => {
   jobStore.selectedJob = {}
+  mobileMediaQuery = window.matchMedia('(max-width: 767px)')
+  syncMobileView()
+  mobileMediaQuery.addEventListener('change', syncMobileView)
   await jobStore.fetchSavedJobs()
+})
+
+onBeforeUnmount(() => {
+  mobileMediaQuery?.removeEventListener('change', syncMobileView)
 })
 
 watch(detailOpen, (open) => {

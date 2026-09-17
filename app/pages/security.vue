@@ -113,6 +113,7 @@
               color="error"
               variant="outline"
               icon="i-lucide-trash-2"
+              class="w-full justify-center sm:w-auto"
               :disabled="deactivatingAccount"
               @click="deleteModalOpen = true"
             >

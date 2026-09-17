@@ -38,6 +38,13 @@ const formatDate = (d?: string | null) => {
     return d
   }
 }
+
+const formatWorkplace = (workplace?: string | null) => {
+  if (!workplace) return ''
+
+  return workplace.toString().replace(/^\w/, c => c.toUpperCase())
+}
+
 const timeAgo = (d?: string | null) => {
   if (!d) return 'unknown';
   const diff = Date.now() - new Date(d).getTime();
@@ -128,105 +135,129 @@ watch(() => selectedJob.value?.id, () => {
   >
     <!-- Header -->
      <template #header>
-      
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <UAvatar :src="selectedJob.company_logo" icon="i-heroicons-building-office-2" size="lg" />
-        <div>
-          <NuxtLink v-if="selectedJob.company_id" :to="`/company/${selectedJob.company_id}`" class="text-sm text-primary-600 font-medium hover:underline">
-            {{ selectedJob.company_name || 'Company' }}
-          </NuxtLink>
-          <h2 class="text-xl font-bold mt-1">{{ selectedJob.role || selectedJob.title || 'Untitled Role' }}</h2>
-          <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ selectedJob.short_description || selectedJob.description }}</p>
-           <div class="flex items-center gap-2">
-            
-          <UBadge icon="i-heroicons-map-pin" size="md" variant="outline" v-if="selectedJob.workplace" color="neutral">{{ (selectedJob.workplace || '').toString().replace(/^\w/, c => c.toUpperCase()) }}</UBadge>
-          
-          <UBadge  v-if="hasSalary(selectedJob)" color="primary" variant="solid" >
-            
-            {{ formatMoney(selectedJob.salary_min) }} - {{ formatMoney(selectedJob.salary_max) }}
-          </UBadge>
-          
-        </div>
-        </div>
-      </div>
-
-      <div class="flex-shrink-0 flex flex-col items-end gap-3">
-         <UButton
-          v-if="selectedJob.id"
-          :aria-label="isSaved ? 'Remove saved job' : 'Save job'"
-          :icon="isSaved ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
-          :color="isSaved ? 'primary' : 'neutral'"
-          :variant="isSaved ? 'solid' : 'outline'"
-          :loading="isSaving"
-          :disabled="isSaving"
-          size="sm"
-          @click="toggleSaved"
-        >
-          {{ isSaved ? 'Saved' : 'Save Job' }}
-        </UButton>
-         <div class="mt-6">
-      <UButton
-        v-if="applyLink"
-        block
-        size="lg"
-        color="primary"
-        @click="submitApplication"
-      >
-        Submit Application
-      </UButton>
-
-      <UButton v-else block size="lg" color="secondary" variant="outline" disabled>
-        No apply link available
-      </UButton>
-
-      <div
-        v-if="showApplicationPrompt"
-        class="mt-3 rounded-lg border border-muted bg-elevated/50 p-3 text-left"
-      >
-        <div class="flex items-start gap-3">
-          <UIcon name="i-lucide-circle-help" class="mt-0.5 size-5 text-primary" />
+      <div class="space-y-4">
+        <div class="flex items-start gap-3 sm:gap-4">
+          <UAvatar :src="selectedJob.company_logo" icon="i-heroicons-building-office-2" size="lg" class="mt-0.5 shrink-0" />
           <div class="min-w-0 flex-1">
-            <p class="font-medium text-default">Did you apply?</p>
-            <p class="mt-1 text-sm text-muted">
-              Track this application so you can follow up later.
+            <NuxtLink
+              v-if="selectedJob.company_id"
+              :to="`/company/${selectedJob.company_id}`"
+              class="block truncate text-sm font-medium text-primary-600 hover:underline"
+            >
+              {{ selectedJob.company_name || 'Company' }}
+            </NuxtLink>
+            <p v-else class="truncate text-sm font-medium text-primary-600">
+              {{ selectedJob.company_name || 'Company' }}
             </p>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <UButton
-                size="sm"
-                icon="i-lucide-clipboard-check"
-                :loading="isApplying"
-                :disabled="isApplying"
-                @click="confirmApplied"
+            <h2 class="mt-1 text-xl font-bold leading-snug text-highlighted">
+              {{ selectedJob.role || selectedJob.title || 'Untitled Role' }}
+            </h2>
+            <p class="mt-1 line-clamp-2 text-sm text-muted">
+              {{ selectedJob.short_description || selectedJob.description }}
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                v-if="selectedJob.workplace"
+                class="inline-flex items-center gap-1 rounded-md border border-muted px-2 py-1 text-xs font-medium text-toned"
               >
-                Yes, I applied
-              </UButton>
-              <UButton
-                size="sm"
-                color="neutral"
-                variant="ghost"
-                :disabled="isApplying"
-                @click="dismissApplicationPrompt"
+                <UIcon name="i-heroicons-map-pin" class="size-3.5" />
+                {{ formatWorkplace(selectedJob.workplace) }}
+              </span>
+              <span
+                v-if="hasSalary(selectedJob)"
+                class="inline-flex items-center rounded-md bg-primary px-2 py-1 text-xs font-medium text-inverted"
               >
-                Not yet
-              </UButton>
+                {{ formatMoney(selectedJob.salary_min) }} - {{ formatMoney(selectedJob.salary_max) }}
+              </span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div
-        v-else-if="selectedJob.id && isApplied"
-        class="mt-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary"
-      >
-        <UIcon name="i-lucide-clipboard-check" class="size-4" />
-        <span class="font-medium">Application tracked</span>
-      </div>
-    </div>
-       
+        <div class="grid gap-2 sm:flex sm:items-center sm:justify-end">
+          <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <UButton
+              v-if="selectedJob.id"
+              :aria-label="isSaved ? 'Remove saved job' : 'Save job'"
+              :icon="isSaved ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
+              :color="isSaved ? 'primary' : 'neutral'"
+              :variant="isSaved ? 'solid' : 'outline'"
+              :loading="isSaving"
+              :disabled="isSaving"
+              size="md"
+              block
+              class="justify-center sm:w-auto"
+              @click="toggleSaved"
+            >
+              {{ isSaved ? 'Saved' : 'Save Job' }}
+            </UButton>
+            <UButton
+              v-if="applyLink"
+              block
+              size="md"
+              color="primary"
+              class="justify-center sm:w-auto"
+              @click="submitApplication"
+            >
+              Submit Application
+            </UButton>
 
+            <UButton
+              v-else
+              block
+              size="md"
+              color="secondary"
+              variant="outline"
+              disabled
+              class="justify-center sm:w-auto"
+            >
+              No apply link
+            </UButton>
+          </div>
+
+          <div
+            v-if="showApplicationPrompt"
+            class="rounded-lg border border-muted bg-elevated/50 p-3 text-left sm:max-w-md"
+          >
+            <div class="flex items-start gap-3">
+              <UIcon name="i-lucide-circle-help" class="mt-0.5 size-5 shrink-0 text-primary" />
+              <div class="min-w-0 flex-1">
+                <p class="font-medium text-default">Did you apply?</p>
+                <p class="mt-1 text-sm text-muted">
+                  Track this application so you can follow up later.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <UButton
+                    size="sm"
+                    icon="i-lucide-clipboard-check"
+                    :loading="isApplying"
+                    :disabled="isApplying"
+                    @click="confirmApplied"
+                  >
+                    Yes, I applied
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    color="neutral"
+                    variant="ghost"
+                    :disabled="isApplying"
+                    @click="dismissApplicationPrompt"
+                  >
+                    Not yet
+                  </UButton>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-else-if="selectedJob.id && isApplied"
+            class="flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary sm:justify-start"
+          >
+            <UIcon name="i-lucide-clipboard-check" class="size-4" />
+            <span class="font-medium">Application tracked</span>
+          </div>
+        </div>
       </div>
-    </div>
      </template>
   
     

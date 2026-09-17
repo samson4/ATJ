@@ -12,7 +12,7 @@
     </template>
   </UHeader>
 
-  <UMain>
+  <UMain class="w-full">
     <slot />
   </UMain>
 

@@ -21,16 +21,30 @@
       <div class="flex  gap-4">
         <UAvatar :src="job.company_logo" icon="i-heroicons-building-office-2" size="lg" />
 
-        <div class="flex-1">
+        <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-3">
             
-            <div class="gap-4">
-              <div class="flex justify-between">
-<NuxtLink  class="text-sm text-primary-600 font-medium">
-                {{ job.company_name }}
-              </NuxtLink>
-              <UBadge icon="i-heroicons-map-pin" size="sm" variant="outline" v-if="job.workplace" color="neutral">{{ (job.workplace || '').toString().replace(/^\w/, c => c.toUpperCase()) }}</UBadge>
-            
+            <div class="min-w-0 flex-1 gap-4">
+              <div class="flex min-w-0 items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <NuxtLink class="block truncate text-sm font-medium text-primary-600">
+                    {{ job.company_name }}
+                  </NuxtLink>
+                  <div v-if="job.workplace" class="mt-1 flex items-center gap-1 text-[11px] leading-none text-muted sm:hidden">
+                    <UIcon name="i-heroicons-map-pin" class="size-3 shrink-0" />
+                    <span class="truncate">{{ formatWorkplace(job.workplace) }}</span>
+                  </div>
+                </div>
+                <UBadge
+                  v-if="job.workplace"
+                  icon="i-heroicons-map-pin"
+                  size="sm"
+                  variant="outline"
+                  color="neutral"
+                  class="hidden shrink-0 sm:inline-flex"
+                >
+                  {{ formatWorkplace(job.workplace) }}
+                </UBadge>
               </div>
               
               <h3 class="text-lg font-semibold mt-1">{{ job.role }}</h3>
@@ -177,6 +191,12 @@ const formatDate = (d?: string | null) => {
   } catch {
     return d
   }
+}
+
+const formatWorkplace = (workplace?: string | null) => {
+  if (!workplace) return ''
+
+  return workplace.toString().replace(/^\w/, c => c.toUpperCase())
 }
 
 
