@@ -10,13 +10,23 @@
       
       :key="job.id"
       @click="selectJob(job)"
-      class="text-sm cursor-pointer border-l-2 transition-colors my-6"
+      class="relative overflow-hidden text-sm cursor-pointer border-l-2 transition-colors my-6"
       :class="[
         selectedJob && selectedJob.id === job.id
           ? 'border-primary bg-primary/10'
-          : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5'
+          : 'border-(--ui-bg) hover:border-primary hover:bg-primary/5',
+        isExpired(job) ? 'opacity-80' : ''
       ]"
     > 
+    <div
+      v-if="isExpired(job)"
+      class="pointer-events-none absolute inset-0 z-10 bg-gray-950/5"
+      aria-hidden="true"
+    />
+    <ExpiredStamp
+      v-if="isExpired(job)"
+      class="absolute right-2 top-1 z-20 w-24 opacity-90 sm:right-3 sm:top-2 sm:w-32"
+    />
     <!-- <template #content> -->
       <div class="flex  gap-4">
         <UAvatar :src="job.company_logo" icon="i-heroicons-building-office-2" size="lg" />
@@ -64,10 +74,10 @@
                :color="isSaved(job.id) ? 'primary' : 'neutral'"
                :variant="isSaved(job.id) ? 'solid' : 'outline'"
                :loading="isSaving(job.id)"
-               :disabled="isSaving(job.id)"
+               :disabled="isSaving(job.id) || (isExpired(job) && !isSaved(job.id))"
                size="sm"
                square
-               @click.stop="toggleSaved(job.id)"
+               @click.stop="toggleSaved(job)"
              />
              
             </div>
@@ -119,6 +129,7 @@ import JobCardSkeleton from './JobCardSkeleton.vue'
 import { useJobStore } from "~/stores/job"
 import { marked } from 'marked';
 import type { Job } from '~/interfaces/jobInterface'
+import { isJobExpired } from '~/utils/jobDeadline'
 const { $supabase } = useNuxtApp()
 const props = defineProps({
   job: {
@@ -248,8 +259,11 @@ const isSaved = (jobId?: string) => {
 const isSaving = (jobId?: string) => {
   return jobStore.isSavingJob(jobId)
 }
-const toggleSaved = async (jobId?: string) => {
-  await jobStore.toggleSavedJob(jobId)
+const isExpired = (job: Job) => {
+  return isJobExpired(job)
+}
+const toggleSaved = async (job: Job) => {
+  await jobStore.toggleSavedJob(job)
 }
 const fetchJobs = async () => {
   loading.value = true

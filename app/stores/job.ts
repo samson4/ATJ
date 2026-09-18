@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { isJobExpired } from '~/utils/jobDeadline'
 
 type JobRecord = {
   id?: string
@@ -24,6 +25,24 @@ type JobState = {
   loadingAppliedJobs: boolean
   applyingJobIds: string[]
   removingAppliedJobIds: string[]
+}
+
+type JobReference = string | JobRecord | undefined
+
+const getJobId = (job: JobReference) => {
+  return typeof job === 'string' ? job : job?.id
+}
+
+const resolveJobRecord = (state: JobState, job: JobReference) => {
+  if (!job) return undefined
+  if (typeof job !== 'string') return job
+
+  return [state.selectedJob, ...state.jobList, ...state.savedJobs, ...state.appliedJobs]
+    .find((item) => item?.id === job)
+}
+
+const isExpiredJobReference = (state: JobState, job: JobReference) => {
+  return isJobExpired(resolveJobRecord(state, job))
 }
 
 
@@ -147,10 +166,21 @@ export const useJobStore = defineStore('job', {
         this.loadingSavedJobs = false
       }
     },
-    async saveJob(jobId?: string) {
+    async saveJob(job: JobReference) {
+      const jobId = getJobId(job)
       if (!jobId || this.isSavingJob(jobId)) return
 
       const toast = useToast()
+      if (isExpiredJobReference(this.$state, job)) {
+        toast.add({
+          title: 'Job expired',
+          description: 'This job is no longer accepting new actions.',
+          icon: 'i-lucide-lock',
+          color: 'warning'
+        })
+        return
+      }
+
       this.savingJobIds.push(jobId)
 
       try {
@@ -240,11 +270,13 @@ export const useJobStore = defineStore('job', {
         this.savingJobIds = this.savingJobIds.filter((id) => id !== jobId)
       }
     },
-    async toggleSavedJob(jobId?: string) {
+    async toggleSavedJob(job: JobReference) {
+      const jobId = getJobId(job)
+
       if (this.isJobSaved(jobId)) {
         await this.unsaveJob(jobId)
       } else {
-        await this.saveJob(jobId)
+        await this.saveJob(job)
       }
     },
     async fetchAppliedJobIds() {
@@ -312,10 +344,21 @@ export const useJobStore = defineStore('job', {
         this.loadingAppliedJobs = false
       }
     },
-    async markJobApplied(jobId?: string) {
+    async markJobApplied(job: JobReference) {
+      const jobId = getJobId(job)
       if (!jobId || this.isApplyingJob(jobId)) return false
 
       const toast = useToast()
+      if (isExpiredJobReference(this.$state, job)) {
+        toast.add({
+          title: 'Job expired',
+          description: 'This job is no longer accepting new actions.',
+          icon: 'i-lucide-lock',
+          color: 'warning'
+        })
+        return false
+      }
+
       this.applyingJobIds.push(jobId)
 
       try {

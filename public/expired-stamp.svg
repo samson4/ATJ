@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="140" viewBox="0 0 260 140" role="img" aria-labelledby="title">
+  <title id="title">Expired</title>
+  <g transform="translate(22 75) rotate(-16)">
+    <rect x="0" y="-34" width="214" height="68" rx="4" fill="none" stroke="#e3342f" stroke-width="4" stroke-dasharray="4 5" opacity=".72"/>
+    <rect x="8" y="-26" width="198" height="52" rx="2" fill="none" stroke="#e3342f" stroke-width="2" opacity=".5"/>
+    <text
+      x="107"
+      y="10"
+      text-anchor="middle"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="44"
+      font-weight="500"
+      letter-spacing="2"
+      fill="#e3342f"
+      opacity=".78"
+    >EXPIRED</text>
+  </g>
+</svg>

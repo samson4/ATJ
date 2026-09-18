@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import { useJobStore } from "~/stores/job";
 import { computed, ref, watch } from 'vue';
 import type { Job } from '~/interfaces/jobInterface'
+import { isJobExpired } from '~/utils/jobDeadline'
 
 withDefaults(defineProps<{
   fullHeight?: boolean
@@ -66,6 +67,7 @@ const isSaved = computed(() => jobStore.isJobSaved(selectedJob.value?.id));
 const isSaving = computed(() => jobStore.isSavingJob(selectedJob.value?.id));
 const isApplied = computed(() => jobStore.isJobApplied(selectedJob.value?.id));
 const isApplying = computed(() => jobStore.isApplyingJob(selectedJob.value?.id));
+const isExpired = computed(() => isJobExpired(selectedJob.value));
 const applicationPromptJobId = ref<string | null>(null);
 const dismissedApplicationPromptJobIds = ref<string[]>([]);
 const showApplicationPrompt = computed(() => {
@@ -73,11 +75,12 @@ const showApplicationPrompt = computed(() => {
   return !!jobId
     && applicationPromptJobId.value === jobId
     && !isApplied.value
+    && !isExpired.value
     && !dismissedApplicationPromptJobIds.value.includes(jobId);
 });
 
 const toggleSaved = async () => {
-  await jobStore.toggleSavedJob(selectedJob.value?.id);
+  await jobStore.toggleSavedJob(selectedJob.value);
 };
 
 const openApplyLink = (link: string) => {
@@ -90,7 +93,7 @@ const openApplyLink = (link: string) => {
 };
 
 const submitApplication = async () => {
-  if (!applyLink.value) return;
+  if (!applyLink.value || isExpired.value) return;
 
   openApplyLink(applyLink.value);
 
@@ -104,8 +107,7 @@ const submitApplication = async () => {
 };
 
 const confirmApplied = async () => {
-  const jobId = selectedJob.value?.id;
-  const tracked = await jobStore.markJobApplied(jobId);
+  const tracked = await jobStore.markJobApplied(selectedJob.value);
 
   if (tracked) {
     applicationPromptJobId.value = null;
@@ -135,10 +137,14 @@ watch(() => selectedJob.value?.id, () => {
   >
     <!-- Header -->
      <template #header>
-      <div class="space-y-4">
+      <div class="relative space-y-4 overflow-hidden">
+        <ExpiredStamp
+          v-if="isExpired"
+          class="pointer-events-none absolute right-1 top-0 z-10 w-32 opacity-90 sm:right-4 sm:top-1 sm:w-44"
+        />
         <div class="flex items-start gap-3 sm:gap-4">
           <UAvatar :src="selectedJob.company_logo" icon="i-heroicons-building-office-2" size="lg" class="mt-0.5 shrink-0" />
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 flex-1" :class="isExpired ? 'pr-20 sm:pr-40' : ''">
             <NuxtLink
               v-if="selectedJob.company_id"
               :to="`/company/${selectedJob.company_id}`"
@@ -182,26 +188,31 @@ watch(() => selectedJob.value?.id, () => {
               :color="isSaved ? 'primary' : 'neutral'"
               :variant="isSaved ? 'solid' : 'outline'"
               :loading="isSaving"
-              :disabled="isSaving"
+              :disabled="isSaving || (isExpired && !isSaved)"
               size="md"
               block
-              class="justify-center sm:w-auto"
+              class="justify-center sm:w-auto cursor-pointer"
               @click="toggleSaved"
             >
               {{ isSaved ? 'Saved' : 'Save Job' }}
             </UButton>
             <UButton
-              v-if="applyLink"
+              v-if="applyLink && !isExpired"
               block
               size="md"
               color="primary"
-              class="justify-center sm:w-auto"
+              class="justify-center sm:w-auto cursor-pointer"
               @click="submitApplication"
             >
               Submit Application
             </UButton>
 
-            <UButton
+            <!-- <ExpiredStamp
+              v-else-if="isExpired"
+              class="mx-auto w-28 opacity-90 sm:mx-0 sm:w-36"
+            /> -->
+
+            <!-- <UButton
               v-else
               block
               size="md"
@@ -211,8 +222,10 @@ watch(() => selectedJob.value?.id, () => {
               class="justify-center sm:w-auto"
             >
               No apply link
-            </UButton>
+            </UButton> -->
           </div>
+
+         
 
           <div
             v-if="showApplicationPrompt"
