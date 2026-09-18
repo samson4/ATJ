@@ -187,7 +187,7 @@ const applyDateFilter = async () => {
 
 const cancelDateFilter = async () => {
   dateRange.value = []
-  await searchJobs()
+  // await searchJobs()
   dateFilterOpen.value = false
 }
 </script>
