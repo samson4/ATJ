@@ -15,6 +15,7 @@ console.log("page",page)
 // --- State ---
 const searchQuery = ref('')
 const loading = ref(false)
+const dateFilterOpen = ref(false)
 
 // --- Filter Selections ---
 // 1. Initialize with a range object for UCalendar
@@ -178,6 +179,17 @@ const searchJobs = async () => {
   }
   loading.value = false;
 }
+
+const applyDateFilter = async () => {
+  await searchJobs()
+  dateFilterOpen.value = false
+}
+
+const cancelDateFilter = async () => {
+  dateRange.value = []
+  await searchJobs()
+  dateFilterOpen.value = false
+}
 </script>
 
 <template>
@@ -221,7 +233,7 @@ const searchJobs = async () => {
           <div class="px-6 pt-3 flex flex-col">
             <div class="flex flex-wrap justify-center gap-4 w-full">
               
-              <UPopover :popper="{ placement: 'bottom-start' }">
+              <UPopover v-model:open="dateFilterOpen" :popper="{ placement: 'bottom-start' }">
 
                  
 
@@ -240,10 +252,10 @@ const searchJobs = async () => {
                   </div>
                   
                   <div class="flex justify-end p-2 border-t border-gray-200 dark:border-gray-700 gap-2">
-                    <UButton size="xs" color="error" variant="ghost" @click="dateRange = []; searchJobs()">
+                    <UButton size="xs" color="error" variant="ghost" @click="cancelDateFilter">
                       Cancel
                     </UButton>
-                    <UButton size="xs" color="primary" @click="searchJobs()">
+                    <UButton size="xs" color="primary" @click="applyDateFilter">
                       OK
                     </UButton>
                   </div>
