@@ -162,14 +162,15 @@ const props = defineProps({
 
 //data & store usage
 const jobStore = useJobStore()
+const route = useRoute()
 const jobs = computed<Job[]>(() => {
   return Array.isArray(props.jobs) ? props.jobs as Job[] : jobStore.jobList || []
 })
 const loading = ref(props.fetchOnMount)
-const page = ref(1)
+const page = useState<number>('job-browser-page', () => 1)
 
 const itemsPerPage = ref(50)
-const totalJobs = ref(0)
+const totalJobs = useState<number>('job-browser-total-jobs', () => 0)
 const selectedJob = computed(() => jobStore.selectedJob)
 
 // helpers for display
@@ -246,11 +247,18 @@ const filteredJobs = computed(() => {
 })
 
 //methods
-const selectJob = (job: Job) => {
+const selectJob = async (job: Job) => {
+  if (!job.id) return
+
   if (jobStore.selectedJob && jobStore.selectedJob.id == job.id) {
     jobStore.selectedJob = {}
+    await navigateTo({ path: '/', query: route.query })
   } else {
     jobStore.selectedJob = job
+    await navigateTo({
+      path: `/jobs/${encodeURIComponent(job.id)}`,
+      query: route.query
+    })
   }
 }
 const isSaved = (jobId?: string) => {
@@ -290,7 +298,9 @@ const fetchJobs = async () => {
 }
 //hooks: fetch jobs and store into jobStore.jobList (keeps existing behavior)
 onMounted(async()=>{
-  if (props.fetchOnMount) {
+  const hasCachedJobs = Array.isArray(props.jobs) || jobStore.jobList.length > 0
+
+  if (props.fetchOnMount && !hasCachedJobs) {
     fetchJobs()
   } else {
     loading.value = false
