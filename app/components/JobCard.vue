@@ -4,13 +4,13 @@
     <JobCardSkeleton />
   </div>
 
-  <div v-else-if="filteredJobs.length" class="space-y-4 ">
+  <div v-else-if="filteredJobs.length" class="w-full space-y-3">
     <UCard
       v-for="job in filteredJobs"
       
       :key="job.id"
       @click="selectJob(job)"
-      class="relative overflow-hidden text-sm cursor-pointer border-l-2 transition-colors my-6"
+      class="relative my-2 w-full overflow-hidden border-l-2 text-sm cursor-pointer transition-colors"
       :class="[
         selectedJob && selectedJob.id === job.id
           ? 'border-primary bg-primary/10'
