@@ -13,12 +13,9 @@ withDefaults(defineProps<{
 
 const jobStore = useJobStore();
 const selectedJob = computed<Job>(() => jobStore.selectedJob || ({} as Job));
-const route = useRoute();
 const toast = useToast();
 const requestUrl = useRequestURL();
 
-const isRoutedJob = computed(() => String(route.params.id || '') === selectedJob.value?.id);
-const showCopyJobLink = computed(() => isRoutedJob.value || route.path.startsWith('/company/'));
 const jobShareUrl = computed(() => {
   if (!selectedJob.value?.id) return '';
   return new URL(`/jobs/${encodeURIComponent(selectedJob.value.id)}`, requestUrl.origin).href;
@@ -213,7 +210,7 @@ watch(() => selectedJob.value?.id, () => {
         <div class="grid gap-2 sm:flex sm:items-center sm:justify-end">
           <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <UButton
-              v-if="showCopyJobLink"
+              v-if="selectedJob.id"
               aria-label="Copy job link"
               icon="i-lucide-link"
               label="Copy link"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { sub, format, isSameDay } from 'date-fns' // formatting tools
+import { format } from 'date-fns'
+import { getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date'
+import type { DateRange } from 'reka-ui'
 import { useJobStore } from "~/stores/job"
 
 const { $supabase } = useNuxtApp()
@@ -19,8 +21,12 @@ const loading = ref(false)
 const dateFilterOpen = ref(false)
 
 // --- Filter Selections ---
-// 1. Initialize with a range object for UCalendar
-const dateRange = useState<any>('job-browser-date-range', () => ({}))
+type StoredDateRange = {
+  start?: string
+  end?: string
+}
+
+const dateRange = useState<StoredDateRange>('job-browser-date-range', () => ({}))
 const selectedWorkplace = useState<any[]>('job-browser-workplace', () => [])
 const selectedType = useState<any[]>('job-browser-type', () => [])
 const selectedTag = useState<any[]>('job-browser-tags', () => [])
@@ -61,43 +67,85 @@ const TagOptions = [
   { label: 'Data Science', value: 'Data Science' }
 ]
 
-// --- Computed Helpers ---
+// Keep Nuxt state serializable while adapting it to UCalendar's DateValue model.
+const timeZone = getLocalTimeZone()
 
-// 2. Computed Label for the Button (e.g. "Jan 10 - Jan 20")
-const dateLabel = computed(() => {
-  console.log('Date Range:', dateRange.value)
-  if (dateRange.value.start == undefined ) {
-    return 'Anytime'
-  }
-  if (dateRange.value.end == undefined ) {
-    return format(dateRange.value.start, 'd MMM, yyyy')
-  }
-  
-  const startStr = format(dateRange.value.start, 'd MMM, yyyy')
-  const endStr = dateRange.value.end ? format(dateRange.value.end, 'd MMM, yyyy') : ''
-   
-  if (!dateRange.value.end || isSameDay(dateRange.value.start, dateRange.value.end)) {
-    return startStr
-  }
- 
-  return `${startStr} - ${endStr}`
+const toDateKey = (value: unknown) => {
+  if (!value) return undefined
 
+  if (typeof value === 'string') {
+    return value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, '0')
+    const day = String(value.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const dateValue = value as Partial<DateValue>
+  if (dateValue.year && dateValue.month && dateValue.day) {
+    return `${dateValue.year}-${String(dateValue.month).padStart(2, '0')}-${String(dateValue.day).padStart(2, '0')}`
+  }
+
+  return undefined
+}
+
+const toCalendarDate = (value: unknown) => {
+  const dateKey = toDateKey(value)
+  if (!dateKey) return undefined
+
+  try {
+    return parseDate(dateKey)
+  } catch {
+    return undefined
+  }
+}
+
+const calendarDateRange = computed<DateRange | null>({
+  get: () => ({
+    start: toCalendarDate(dateRange.value?.start),
+    end: toCalendarDate(dateRange.value?.end)
+  }),
+  set: (value) => {
+    dateRange.value = {
+      start: toDateKey(value?.start),
+      end: toDateKey(value?.end)
+    }
+  }
 })
 
+const dateLabel = computed(() => {
+  const startKey = toDateKey(dateRange.value?.start)
+  const endKey = toDateKey(dateRange.value?.end)
+  const startDate = toCalendarDate(startKey)?.toDate(timeZone)
 
+  if (!startKey || !startDate) return 'Anytime'
+
+  const startLabel = format(startDate, 'd MMM, yyyy')
+  const endDate = toCalendarDate(endKey)?.toDate(timeZone)
+  if (!endKey || !endDate || startKey === endKey) return startLabel
+
+  return `${startLabel} - ${format(endDate, 'd MMM, yyyy')}`
+})
 
 const selectedJob = computed(() => jobStore.selectedJob)
 const isMobile = ref(false)
-const jobListPanel = ref<any>(null)
+const jobListPanel = ref<HTMLElement | null>(null)
 const savedWindowScrollY = useState<number>('job-browser-window-scroll-y', () => 0)
 const savedListScrollTop = useState<number>('job-browser-list-scroll-top', () => 0)
 let mobileMediaQuery: MediaQueryList | null = null
 
+const rememberListScrollPosition = () => {
+  if (jobListPanel.value) {
+    savedListScrollTop.value = jobListPanel.value.scrollTop
+  }
+}
+
 const rememberScrollPosition = () => {
   savedWindowScrollY.value = window.scrollY
-
-  const panelElement = jobListPanel.value?.$el as HTMLElement | undefined
-  if (panelElement) savedListScrollTop.value = panelElement.scrollTop
+  rememberListScrollPosition()
 }
 
 const restoreScrollPosition = () => {
@@ -105,8 +153,9 @@ const restoreScrollPosition = () => {
     requestAnimationFrame(() => {
       window.scrollTo({ top: savedWindowScrollY.value })
 
-      const panelElement = jobListPanel.value?.$el as HTMLElement | undefined
-      if (panelElement) panelElement.scrollTop = savedListScrollTop.value
+      if (jobListPanel.value) {
+        jobListPanel.value.scrollTop = savedListScrollTop.value
+      }
     })
   })
 }
@@ -155,19 +204,19 @@ const searchJobs = async () => {
     query = query.or(`job_description.ilike.%${searchQuery.value}%,role.ilike.%${searchQuery.value}%,company_name.ilike.%${searchQuery.value}%`)
   }
 
-  // 3. Date Filter Logic (Updated for Range)
-  if (dateRange.value.start) {
-    const startIso = new Date(dateRange.value.start).toISOString()
-    query = query.gte('created_at', startIso)
-    
-    // If we have an end date, set it to the very end of that day (23:59:59)
-    if (dateRange.value.end) {
-      const endDate = new Date(dateRange.value.end)
-      endDate.setHours(23, 59, 59, 999)
-      query = query.lte('created_at', endDate.toISOString())
-    }else {
-      // If no end date, just use the start date as a single day filter
-      const endOfDay = new Date(dateRange.value.start)
+  // Date Filter
+  const startDate = toCalendarDate(dateRange.value?.start)?.toDate(timeZone)
+  const endDate = toCalendarDate(dateRange.value?.end)?.toDate(timeZone)
+
+  if (startDate) {
+    query = query.gte('created_at', startDate.toISOString())
+
+    if (endDate) {
+      const endOfRange = new Date(endDate)
+      endOfRange.setHours(23, 59, 59, 999)
+      query = query.lte('created_at', endOfRange.toISOString())
+    } else {
+      const endOfDay = new Date(startDate)
       endOfDay.setHours(23, 59, 59, 999)
       query = query.lte('created_at', endOfDay.toISOString())
     }
@@ -210,7 +259,7 @@ const applyDateFilter = async () => {
 }
 
 const cancelDateFilter = async () => {
-  dateRange.value = []
+  dateRange.value = {}
   // await searchJobs()
   dateFilterOpen.value = false
 }
@@ -224,7 +273,7 @@ const cancelDateFilter = async () => {
     :description="page?.description"
   />
     <div
-      style="background-image: url('atj.jpeg');"
+      style="background-image: url('/atj.jpeg');"
       class="bg-no-repeat bg-cover bg-bottom w-full h-[350px] flex justify-center items-center relative rounded-md overflow-hidden mb-6"
     >
       <div class="absolute inset-0 bg-black/10"></div>
@@ -272,7 +321,7 @@ const cancelDateFilter = async () => {
         
                 <template #content>
                   <div class="p-2">
-                    <UCalendar range v-model="dateRange"  />
+                    <UCalendar v-model="calendarDateRange" range />
                   </div>
                   
                   <div class="flex justify-end p-2 border-t border-gray-200 dark:border-gray-700 gap-2">
@@ -349,7 +398,7 @@ const cancelDateFilter = async () => {
                 size="sm"
                 ui="{  }" 
                 @click="
-                  dateRange = [];
+                  dateRange = {};
                   selectedWorkplace = [];
                   selectedType = [];
                   selectedTag = [];
@@ -367,7 +416,6 @@ const cancelDateFilter = async () => {
     
     <div class="w-full md:flex gap-6 my-6" :class="{ 'md:justify-center': !selectedJob?.id }">
       <UDashboardPanel
-        ref="jobListPanel"
         class="transition-all duration-500"
         :resizable="!!selectedJob?.id"
         :min-size="22"
@@ -375,10 +423,16 @@ const cancelDateFilter = async () => {
         :max-size="40"
         :class="[
           !selectedJob?.id ? 'w-full md:max-w-3xl' : 'w-full',
-          'md:h-screen md:overflow-y-auto'
+          'md:h-screen'
         ]"
       >
-        <JobCard /> 
+        <div
+          ref="jobListPanel"
+          class="w-full md:min-h-0 md:flex-1 md:overflow-y-auto md:px-1 [scrollbar-gutter:stable]"
+          @scroll.passive="rememberListScrollPosition"
+        >
+          <JobCard />
+        </div>
       </UDashboardPanel>
 
       <Transition
