@@ -13,7 +13,6 @@ const route = useRoute()
 const { data: page } = await useAsyncData('index', () => {
   return queryCollection('content').first()
 })
-console.log("page",page)
 
 // --- State ---
 const searchQuery = useState<string>('job-browser-search-query', () => '')

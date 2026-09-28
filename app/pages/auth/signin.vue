@@ -78,7 +78,6 @@ let { data, error } = await $supabase.auth.signInWithPassword({
 })
 if(error) {
   if(error.code){
-    console.log(error.code)
   toast.add({
     title: 'Uh oh! Something went wrong.',
     description: error.message,

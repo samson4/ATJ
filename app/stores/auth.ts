@@ -13,7 +13,6 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     setUser(userInfo) {
-      console.log("userInfo",userInfo)
       this.$state.user = userInfo
     },
   },

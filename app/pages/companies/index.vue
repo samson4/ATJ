@@ -45,7 +45,6 @@ definePageMeta({ layout: 'default' })
 
 //methods
 const openDetail = ()=>{
-  console.log("open detail called")
 }
 const tabItems = [
   { label: 'Best Matches' },

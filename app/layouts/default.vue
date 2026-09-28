@@ -76,7 +76,6 @@ onMounted(async () => {
     authStore.user = user
     jobStore.fetchSavedJobIds()
     jobStore.fetchAppliedJobIds()
-    console.log("auth",authStore)
   }
 });
 

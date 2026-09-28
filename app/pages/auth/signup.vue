@@ -65,7 +65,6 @@ router.push("/")
       }
       // router.push("/jobs")
       // toast.add({ title: "Google", description: "Login with Google" });
-      // console.log("data",data)
     },
   },
 ];
@@ -84,7 +83,6 @@ const schema = z
 type Schema = z.output<typeof schema>;
 
 const onSubmit = async(payload: FormSubmitEvent<Schema>)=> {
-console.log("payload",payload.data.email)
 let { data, error } = await $supabase.auth.signUp({
   email: payload.data.email,
   password: payload.data.password
