@@ -270,7 +270,6 @@ const cancelDateFilter = async () => {
   <UPageHero
     class="hidden md:block"
     :title="page?.title"
-    :description="page?.description"
   />
     <div
       style="background-image: url('/atj.jpeg');"
