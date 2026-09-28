@@ -41,9 +41,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
     public: {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
-    FRONTEND_REDIRECT_URL:process.env.FRONTEND_REDIRECT_URL
+      SUPABASE_URL: process.env.SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+      FRONTEND_REDIRECT_URL: process.env.FRONTEND_REDIRECT_URL,
+      CONTACT_EMAIL: process.env.NUXT_PUBLIC_CONTACT_EMAIL
     }
   },
 })

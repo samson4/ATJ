@@ -2,6 +2,7 @@
 definePageMeta({ layout: 'landing' })
 
 const effectiveDate = 'August 31, 2026'
+const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 useSeoMeta({
   title: 'Privacy Policy | Addis Tech Jobs',
@@ -139,7 +140,10 @@ useSeoMeta({
           We keep personal information for as long as needed to provide the service,
           comply with legal obligations, resolve disputes, prevent abuse, and
           maintain business records. You may request account deactivation or deletion
-          by contacting us through the contact page.
+          by emailing
+          <a :href="`mailto:${CONTACT_EMAIL}`" class="font-medium text-primary hover:underline">
+            {{ CONTACT_EMAIL }}
+          </a>.
         </p>
       </section>
 
@@ -153,7 +157,10 @@ useSeoMeta({
           also be able to withdraw consent where processing is based on consent.
         </p>
         <p>
-          To make a privacy request, contact us through the contact page.
+          To make a privacy request, email
+          <a :href="`mailto:${CONTACT_EMAIL}`" class="font-medium text-primary hover:underline">
+            {{ CONTACT_EMAIL }}
+          </a>.
         </p>
       </section>
 
@@ -205,26 +212,29 @@ useSeoMeta({
           Contact Us
         </h2>
         <p>
-          For privacy questions or requests, contact Addis Tech Jobs through our
-          contact page.
+          For privacy questions or requests, email Addis Tech Jobs at
+          <a :href="`mailto:${CONTACT_EMAIL}`" class="font-medium text-primary hover:underline">
+            {{ CONTACT_EMAIL }}
+          </a>.
         </p>
         <UButton
-          to="/contact"
+          :to="`mailto:${CONTACT_EMAIL}`"
+          external
           color="neutral"
           variant="outline"
           icon="i-lucide-mail"
         >
-          Contact Addis Tech Jobs
+          Email Addis Tech Jobs
         </UButton>
       </section>
 
-      <UAlert
+      <!-- <UAlert
         color="warning"
         variant="subtle"
         icon="i-lucide-info"
         title="Legal note"
         description="This policy is a practical draft for the product and should be reviewed by a qualified legal professional before launch."
-      />
+      /> -->
     </article>
   </UContainer>
 </template>

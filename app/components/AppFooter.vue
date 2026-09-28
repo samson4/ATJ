@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const year = new Date().getFullYear()
 const linkedinUrl = 'https://et.linkedin.com/company/addis-tech-jobs'
+const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 // const exploreLinks = [
 //   { label: 'Jobs', to: '/' },
@@ -10,8 +11,9 @@ const linkedinUrl = 'https://et.linkedin.com/company/addis-tech-jobs'
 // ]
 
 const supportLinks = [
-  // { label: 'Contact', to: '/contact' },
-  { label: 'About', to: '/about' }
+  { label: 'Contact', to: '/contact' },
+  { label: 'About', to: '/about' },
+  { label: CONTACT_EMAIL, to: `mailto:${CONTACT_EMAIL}` }
 ]
 
 const legalLinks = [

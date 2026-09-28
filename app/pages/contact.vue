@@ -2,6 +2,7 @@
 definePageMeta({ layout: 'landing' })
 
 const linkedinUrl = 'https://et.linkedin.com/company/addis-tech-jobs'
+const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 useSeoMeta({
   title: 'Contact Addis Tech Jobs',
@@ -27,12 +28,18 @@ useSeoMeta({
           </div>
         </template>
         <p class="text-sm leading-6 text-muted">
-          Replace this placeholder with the official Addis Tech Jobs contact email
-          before launch.
+          Send us an email and we’ll get back to you as soon as possible.
         </p>
-        <p class="mt-4 text-sm font-medium text-highlighted">
-          contact@example.com
-        </p>
+        <UButton
+          :to="`mailto:${CONTACT_EMAIL}`"
+          external
+          icon="i-lucide-mail"
+          color="neutral"
+          variant="outline"
+          class="mt-4"
+        >
+          {{ CONTACT_EMAIL }}
+        </UButton>
       </UCard>
 
       <UCard>

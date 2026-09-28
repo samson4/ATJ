@@ -2,6 +2,7 @@
 definePageMeta({ layout: 'landing' })
 
 const effectiveDate = 'August 31, 2026'
+const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 useSeoMeta({
   title: 'Terms of Service | Addis Tech Jobs',
@@ -180,26 +181,29 @@ useSeoMeta({
           Contact
         </h2>
         <p>
-          For questions about these terms, contact Addis Tech Jobs through our
-          contact page.
+          For questions about these terms, email Addis Tech Jobs at
+          <a :href="`mailto:${CONTACT_EMAIL}`" class="font-medium text-primary hover:underline">
+            {{ CONTACT_EMAIL }}
+          </a>.
         </p>
         <UButton
-          to="/contact"
+          :to="`mailto:${CONTACT_EMAIL}`"
+          external
           color="neutral"
           variant="outline"
           icon="i-lucide-mail"
         >
-          Contact Addis Tech Jobs
+          Email Addis Tech Jobs
         </UButton>
       </section>
 
-      <UAlert
+      <!-- <UAlert
         color="warning"
         variant="subtle"
         icon="i-lucide-info"
         title="Legal note"
         description="These terms are a practical draft for the product and should be reviewed by a qualified legal professional before launch."
-      />
+      /> -->
     </article>
   </UContainer>
 </template>
