@@ -1,11 +1,11 @@
 import PDFDocument from 'pdfkit'
 import type { ResumeDocument, ResumeSectionKey } from '~~/shared/types/resume'
-import { formatResumeDate, formatResumeDateRange, resumeHasSectionContent, richTextToPlainText, sanitizeRichText } from '~~/shared/utils/resume'
+import { formatResumeDate, formatResumeDateRange, resumeHasSectionContent, sanitizeRichText } from '~~/shared/utils/resume'
 
 const PAGE_MARGIN = 44
 const BODY_SIZE = 9
-const META_SIZE = 8.5
 const ROW_TITLE_SIZE = 10
+const TEXT_COLOR = '#000000'
 
 const sectionTitles: Record<ResumeSectionKey, string> = {
   summary: 'Professional Summary',
@@ -103,8 +103,6 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
   const pdf = new PDFDocument({
     size: 'A4',
     margin: PAGE_MARGIN,
-    bufferPages: true,
-    pageLayout: 'oneColumn',
     info: { Title: `${document.basics.fullName || 'Resume'} Resume` }
   })
   const chunks: Buffer[] = []
@@ -120,8 +118,6 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
   pdf.registerFont('NotoEthiopicBold', Buffer.from(ethiopicBoldFont))
 
   const contentWidth = () => pdf.page.width - pdf.page.margins.left - pdf.page.margins.right
-  const usablePageHeight = () => pdf.page.height - pdf.page.margins.top - pdf.page.margins.bottom
-  const remainingHeight = () => pdf.page.height - pdf.page.margins.bottom - pdf.y
   const font = (value: string, bold = false) => {
     pdf.font(hasEthiopic(value) ? (bold ? 'NotoEthiopicBold' : 'NotoEthiopic') : (bold ? 'NotoBold' : 'Noto'))
   }
@@ -129,30 +125,10 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
     font(value, bold)
     pdf.text(value, options)
   }
-  const ensureSpace = (height: number) => {
-    if (height <= usablePageHeight() && height > remainingHeight()) pdf.addPage()
-  }
-  const measure = (value: string, size: number, bold = false, options: PDFKit.Mixins.TextOptions = {}) => {
-    if (!value) return 0
-    font(value, bold)
-    pdf.fontSize(size)
-    return pdf.heightOfString(value, { width: contentWidth(), ...options })
-  }
-  const measureRichText = (content: string, indent = 0) => {
-    const plain = richTextToPlainText(content)
-    return plain ? measure(plain, BODY_SIZE, false, { indent, paragraphGap: 2, lineGap: 1 }) : 0
-  }
-  const measureRow = (primary: string, secondary: string, meta: string, details = '') => {
-    const title = [primary, secondary].filter(Boolean).join('  |  ')
-    return measure(title, ROW_TITLE_SIZE, true)
-      + measure(meta, META_SIZE)
-      + measureRichText(details, 8)
-      + 6
-  }
   const drawRichText = (content: string, indent = 0) => {
     const segments = richTextSegments(content)
     if (!segments.length) return
-    pdf.fontSize(BODY_SIZE).fillColor('#374151')
+    pdf.fontSize(BODY_SIZE).fillColor(TEXT_COLOR)
     segments.forEach((segment, index) => {
       font(segment.text, segment.bold)
       pdf.text(segment.text, index === 0 ? {
@@ -165,38 +141,38 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
       })
     })
   }
-  const heading = (label: string, firstBlockHeight = 0) => {
-    const leadHeight = Math.min(firstBlockHeight, usablePageHeight() - 34)
-    ensureSpace(34 + Math.max(leadHeight, 12))
-    pdf.moveDown(0.75).fillColor('#9A3412').fontSize(10)
+  const heading = (label: string) => {
+    pdf.moveDown(0.75).fillColor(TEXT_COLOR).fontSize(ROW_TITLE_SIZE)
     text(label.toUpperCase(), { characterSpacing: 1 }, true)
-    pdf.moveDown(0.2).strokeColor('#FDBA74').lineWidth(0.7)
+    pdf.moveDown(0.2).strokeColor(TEXT_COLOR).lineWidth(0.7)
       .moveTo(pdf.page.margins.left, pdf.y).lineTo(pdf.page.width - pdf.page.margins.right, pdf.y).stroke()
-    pdf.moveDown(0.35).fillColor('#111827')
+    pdf.moveDown(0.35).fillColor(TEXT_COLOR)
   }
   const row = (primary: string, secondary: string, meta: string, details = '') => {
-    ensureSpace(measureRow(primary, secondary, meta, details))
-    pdf.fontSize(ROW_TITLE_SIZE).fillColor('#111827')
+    pdf.fontSize(ROW_TITLE_SIZE).fillColor(TEXT_COLOR)
     text(primary || secondary, { continued: Boolean(primary && secondary) }, true)
-    if (primary && secondary) text(`  |  ${secondary}`)
+    if (primary && secondary) {
+      pdf.fontSize(BODY_SIZE)
+      text(`  |  ${secondary}`)
+    }
     if (meta) {
-      pdf.fontSize(META_SIZE).fillColor('#4B5563')
-      text(meta)
+      pdf.fontSize(BODY_SIZE).fillColor(TEXT_COLOR)
+      text(meta, { oblique: true })
     }
     drawRichText(details, 8)
     pdf.moveDown(0.35)
   }
 
   const basics = document.basics
-  pdf.fillColor('#111827').fontSize(22)
+  pdf.fillColor(TEXT_COLOR).fontSize(22)
   text(basics.fullName || 'Your Name', {}, true)
   if (basics.headline) {
-    pdf.fontSize(11).fillColor('#9A3412')
+    pdf.fontSize(11).fillColor(TEXT_COLOR)
     text(basics.headline)
   }
   const contact = [basics.email, basics.phone, basics.location].filter(Boolean).join('  •  ')
   if (contact) {
-    pdf.moveDown(0.25).fontSize(META_SIZE).fillColor('#4B5563')
+    pdf.moveDown(0.25).fontSize(BODY_SIZE).fillColor(TEXT_COLOR)
     text(contact)
   }
 
@@ -204,12 +180,10 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
     if (!resumeHasSectionContent(document, section)) continue
 
     if (section === 'summary') {
-      const height = measureRichText(basics.summary)
-      heading(sectionTitles[section], height)
+      heading(sectionTitles[section])
       drawRichText(basics.summary)
     } else if (section === 'experience') {
-      const first = document.experience[0]
-      heading(sectionTitles[section], first ? measureRow(first.title, first.company, [first.location, formatResumeDateRange(first.startDate, first.endDate, first.current)].filter(Boolean).join(' • '), first.bullets) : 0)
+      heading(sectionTitles[section])
       document.experience.forEach(item => row(
         item.title,
         item.company,
@@ -218,45 +192,26 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
       ))
     } else if (section === 'education') {
       const details = (item: ResumeDocument['education'][number]) => [item.field !== item.degree ? item.field : '', item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' • ')
-      const first = document.education[0]
-      heading(sectionTitles[section], first ? measureRow(first.degree || first.field, first.institution, details(first)) : 0)
+      heading(sectionTitles[section])
       document.education.forEach(item => row(item.degree || item.field, item.institution, details(item)))
     } else if (section === 'skills') {
-      const first = document.skillGroups[0]
-      heading(sectionTitles[section], first ? measureRow(first.name, first.items.join(', '), '') : 0)
+      heading(sectionTitles[section])
       document.skillGroups.forEach(item => row(item.name, item.items.join(', '), ''))
     } else if (section === 'projects') {
       const meta = (item: ResumeDocument['projects'][number]) => [item.url, formatResumeDateRange(item.startDate, item.endDate)].filter(Boolean).join(' • ')
-      const first = document.projects[0]
-      heading(sectionTitles[section], first ? measureRow(first.name, first.role, meta(first), first.bullets) : 0)
+      heading(sectionTitles[section])
       document.projects.forEach(item => row(item.name, item.role, meta(item), item.bullets))
     } else if (section === 'certifications') {
       const meta = (item: ResumeDocument['certifications'][number]) => [formatResumeDate(item.issueDate), item.credentialUrl].filter(Boolean).join(' • ')
-      const first = document.certifications[0]
-      heading(sectionTitles[section], first ? measureRow(first.name, first.issuer, meta(first)) : 0)
+      heading(sectionTitles[section])
       document.certifications.forEach(item => row(item.name, item.issuer, meta(item)))
     } else if (section === 'languages') {
-      const first = document.languages[0]
-      heading(sectionTitles[section], first ? measureRow(first.name, first.proficiency, '') : 0)
+      heading(sectionTitles[section])
       document.languages.forEach(item => row(item.name, item.proficiency, ''))
     } else if (section === 'links') {
-      const first = document.links[0]
-      heading(sectionTitles[section], first ? measureRow(first.label, first.url, '') : 0)
+      heading(sectionTitles[section])
       document.links.forEach(item => row(item.label, item.url, ''))
     }
-  }
-
-  const pages = pdf.bufferedPageRange()
-  for (let index = pages.start; index < pages.start + pages.count; index++) {
-    pdf.switchToPage(index)
-    const label = `Page ${index - pages.start + 1} of ${pages.count}`
-    font(label)
-    pdf.fontSize(7).fillColor('#6B7280').text(
-      label,
-      pdf.page.margins.left,
-      pdf.page.height - 28,
-      { width: contentWidth(), align: 'center', lineBreak: false }
-    )
   }
 
   pdf.end()

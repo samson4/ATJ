@@ -52,6 +52,16 @@ describe('resume document', () => {
   it('keeps numbered rich-text lists readable for non-HTML exports', () => {
     expect(richTextToPlainText('<ol><li>First</li><li><strong>Second</strong></li></ol>')).toBe('1. First\n2. Second')
   })
+
+  it('keeps partially entered contact values saveable as a draft', () => {
+    const document = createEmptyResumeDocument()
+    document.basics.email = 'marta@'
+    document.projects.push({
+      id: 'draft-project', name: 'Portfolio', role: '', url: 'https://', startDate: '', endDate: '', bullets: ''
+    })
+
+    expect(resumeDocumentSchema.safeParse(document).success).toBe(true)
+  })
 })
 
 describe('CV text parser', () => {

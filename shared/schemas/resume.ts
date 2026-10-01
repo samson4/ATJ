@@ -10,14 +10,11 @@ const richText = (max: number) => z.preprocess((value) => {
   const items = value.map(item => String(item).trim()).filter(Boolean)
   return items.length ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''
 }, text(max))
-const optionalUrl = text(500).refine(
-  value => !value || /^https?:\/\/[^\s]+$/i.test(value),
-  'Enter a valid URL beginning with http:// or https://'
-)
+const optionalUrl = text(500)
 
 export const resumeBasicsSchema = z.object({
   fullName: text(120),
-  email: z.union([z.literal(''), z.email('Enter a valid email')]),
+  email: text(254),
   phone: text(40),
   location: text(120),
   headline: text(160),
@@ -118,6 +115,11 @@ export const resumeRowSchema = z.object({
   source_cv_path: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string()
+})
+
+export const resumeSaveRequestSchema = z.object({
+  name: text(120).min(1),
+  content: resumeDocumentSchema
 })
 
 export const resumeImportResponseSchema = z.object({

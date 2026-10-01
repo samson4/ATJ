@@ -22,9 +22,10 @@ const selectedDate = computed<DateValue | undefined>(() => {
 
 const label = computed(() => formatResumeDate(model.value) || undefined)
 
-function selectDate(value: DateValue | undefined) {
-  if (!value) return
-  model.value = `${String(value.year).padStart(4, '0')}-${String(value.month).padStart(2, '0')}`
+function selectDate(value: unknown) {
+  if (!value || typeof value !== 'object' || !('year' in value) || !('month' in value)) return
+  const selected = value as DateValue
+  model.value = `${String(selected.year).padStart(4, '0')}-${String(selected.month).padStart(2, '0')}`
   open.value = false
 }
 </script>

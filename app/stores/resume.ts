@@ -18,6 +18,10 @@ export const useResumeStore = defineStore('resume', () => {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
   let saveQueue: Promise<void> = Promise.resolve()
 
+  function plainResumeContent(value: unknown) {
+    return JSON.parse(JSON.stringify(value))
+  }
+
   async function requireUser() {
     const { $supabase } = useNuxtApp()
     const { data: { user }, error } = await $supabase.auth.getUser()
@@ -129,7 +133,7 @@ export const useResumeStore = defineStore('resume', () => {
       name: `${resume.name} copy`.slice(0, 120),
       template_key: resume.template_key,
       schema_version: resume.schema_version,
-      content: resumeDocumentSchema.parse(structuredClone(resume.content)),
+      content: resumeDocumentSchema.parse(plainResumeContent(resume.content)),
       source_cv_path: resume.source_cv_path
     }).select('*').single()
     if (error) throw error
@@ -180,24 +184,33 @@ export const useResumeStore = defineStore('resume', () => {
     if (!currentResume.value || saveStatus.value === 'saved') return saveQueue
 
     const id = currentResume.value.id
+    const rawName = currentResume.value.name
+    // Pinia exposes the document as a Vue Proxy. Convert it to plain JSON before
+    // validation and transport because structuredClone cannot clone proxies.
+    const rawContent = plainResumeContent(currentResume.value.content)
     const name = currentResume.value.name.trim().slice(0, 120) || 'Untitled Resume'
-    const content = resumeDocumentSchema.parse(structuredClone(currentResume.value.content))
-    const snapshot = JSON.stringify({ name, content })
+    const parsedContent = resumeDocumentSchema.safeParse(rawContent)
+    if (!parsedContent.success) {
+      saveStatus.value = 'error'
+      errorMessage.value = parsedContent.error.issues[0]?.message || 'The resume contains invalid data.'
+      throw new Error(errorMessage.value)
+    }
+    const content = parsedContent.data
+    const snapshot = JSON.stringify({ name: rawName, content: rawContent })
     saveStatus.value = 'saving'
     errorMessage.value = ''
 
     saveQueue = saveQueue.catch(() => undefined).then(async () => {
-      const { $supabase } = useNuxtApp()
-      const { data, error } = await $supabase.from('resumes')
-        .update({ name, content })
-        .eq('id', id)
-        .select('updated_at')
-        .single()
-      if (error) throw error
+      const token = await accessToken()
+      const data = await $fetch<{ updated_at: string }>(`/api/resumes/${id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: { name, content }
+      })
       if (currentResume.value?.id === id) {
         currentResume.value.updated_at = data.updated_at
         const latest = JSON.stringify({
-          name: currentResume.value.name.trim().slice(0, 120) || 'Untitled Resume',
+          name: currentResume.value.name,
           content: currentResume.value.content
         })
         saveStatus.value = latest === snapshot ? 'saved' : 'dirty'
@@ -205,7 +218,7 @@ export const useResumeStore = defineStore('resume', () => {
       }
     }).catch((error: any) => {
       saveStatus.value = 'error'
-      errorMessage.value = error.message || 'Autosave failed. Your changes are still in this browser.'
+      errorMessage.value = error.data?.statusMessage || error.message || 'Autosave failed. Your changes are still in this browser.'
       throw error
     })
     return saveQueue

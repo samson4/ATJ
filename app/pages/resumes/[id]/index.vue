@@ -12,6 +12,9 @@ const toast = useToast()
 const mobileView = ref<'edit' | 'preview'>('edit')
 const editorReady = ref(false)
 const downloading = ref(false)
+const editableSnapshot = computed(() => store.currentResume
+  ? JSON.stringify({ name: store.currentResume.name, content: store.currentResume.content })
+  : '')
 
 const statusPresentation = computed(() => ({
   idle: { label: 'Not saved', color: 'neutral' as const, icon: 'i-lucide-circle' },
@@ -29,9 +32,9 @@ onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnload)
 })
 
-watch(() => store.currentResume && ({ name: store.currentResume.name, content: store.currentResume.content }), () => {
-  if (editorReady.value) store.scheduleSave()
-}, { deep: true })
+watch(editableSnapshot, (current, previous) => {
+  if (editorReady.value && current !== previous) store.scheduleSave()
+})
 
 function beforeUnload(event: BeforeUnloadEvent) {
   if (!['dirty', 'saving', 'error'].includes(store.saveStatus)) return
@@ -62,6 +65,11 @@ async function retrySave() {
   try { await store.flushSave() }
   catch (error: any) { toast.add({ title: 'Save failed', description: error.message, color: 'error' }) }
 }
+
+async function saveNow() {
+  try { await store.flushSave() }
+  catch (error: any) { toast.add({ title: 'Save failed', description: error.data?.statusMessage || error.message, color: 'error' }) }
+}
 </script>
 
 <template>
@@ -74,11 +82,12 @@ async function retrySave() {
         <div class="flex flex-wrap items-center gap-2">
           <UBadge v-if="store.currentResume" :label="statusPresentation.label" :color="statusPresentation.color" variant="subtle" :icon="statusPresentation.icon" />
           <UButton v-if="store.saveStatus === 'error'" label="Retry save" icon="i-lucide-refresh-cw" color="error" variant="outline" @click="retrySave" />
+          <UButton label="Save" icon="i-lucide-save" color="neutral" variant="outline" :loading="store.saveStatus === 'saving'" :disabled="!store.currentResume || store.saveStatus === 'saved'" @click="saveNow" />
           <UButton label="Download PDF" icon="i-lucide-download" :loading="downloading" :disabled="!store.currentResume" @click="download" />
         </div>
       </div>
 
-      <UAlert v-if="store.errorMessage && store.saveStatus !== 'error'" class="mb-5" color="error" icon="i-lucide-triangle-alert" :title="store.errorMessage" />
+      <UAlert v-if="store.errorMessage" class="mb-5" color="error" icon="i-lucide-triangle-alert" :title="store.saveStatus === 'error' ? 'Could not save resume' : store.errorMessage" :description="store.saveStatus === 'error' ? store.errorMessage : undefined" />
       <UAlert v-if="store.importWarnings.length" class="mb-5" color="warning" icon="i-lucide-scan-text" title="Review imported CV content" :description="store.importWarnings.join(' ')" />
       <div v-if="store.loading" class="grid gap-5 xl:grid-cols-[minmax(400px,0.75fr)_minmax(650px,1.25fr)]"><USkeleton class="h-[70vh]" /><USkeleton class="h-[70vh]" /></div>
       <UCard v-else-if="!store.currentResume"><div class="py-10 text-center"><h2 class="font-semibold text-highlighted">Resume unavailable</h2><p class="mt-1 text-sm text-muted">It may have been deleted or you may not have access.</p><UButton to="/resumes" class="mt-5" label="Back to resumes" /></div></UCard>

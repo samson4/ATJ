@@ -10,6 +10,16 @@
 
     </template>
 
+    <NuxtLink
+      v-if="authUser"
+      to="/resumes"
+      class="hidden items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-flex"
+      active-class="bg-elevated text-primary"
+    >
+     
+      <span>Resume Builder</span>
+    </NuxtLink>
+
     <template #right>
       <div v-if="authUser">
         <!-- <UButton v-if="authUser" to="/" color="error"  variant="outline">Sign Out</UButton> -->
@@ -45,6 +55,7 @@
 
 <script setup lang="ts">
 //init
+import type { User } from '@supabase/supabase-js'
 import { useAuthStore } from "~/stores/auth"
 import { useJobStore } from "~/stores/job"
 const { $supabase } = useNuxtApp();
@@ -53,10 +64,9 @@ const router = useRouter();
 //data
 const authStore = useAuthStore()
 const jobStore = useJobStore()
-const authUser = ref(null);
+const authUser = ref<User | null>(null);
 const items = ref([
   { label: "Profile", icon: "lucide:user", to: "/profile" },
-  { label: "Resume Builder", icon: "i-lucide-files", to: "/resumes" },
   { label: "Saved Jobs", icon: "i-lucide-bookmark", to: "/saved-jobs" },
   {
     label: "Sign Out",

@@ -3,16 +3,26 @@ withDefaults(defineProps<{
   title: string
   description?: string
   defaultOpen?: boolean
+  open?: boolean
   sortable?: boolean
 }>(), {
   description: '',
-  defaultOpen: true,
+  defaultOpen: false,
   sortable: false
 })
+
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+}>()
 </script>
 
 <template>
-  <UCollapsible :default-open="defaultOpen" class="rounded-lg border border-muted bg-default">
+  <UCollapsible
+    :default-open="defaultOpen"
+    :open="open"
+    class="rounded-lg border border-muted bg-default"
+    @update:open="emit('update:open', $event)"
+  >
     <template #default="{ open }">
       <button
         type="button"

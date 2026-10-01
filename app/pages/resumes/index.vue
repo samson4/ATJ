@@ -61,15 +61,15 @@ async function renameDraft() {
   } finally { workingId.value = '' }
 }
 
-async function duplicateDraft(resume: ResumeRow) {
-  workingId.value = resume.id
-  try {
-    await store.duplicateResume(resume)
-    toast.add({ title: 'Resume duplicated', color: 'success', icon: 'i-lucide-copy-check' })
-  } catch (error: any) {
-    toast.add({ title: 'Could not duplicate resume', description: error.message, color: 'error' })
-  } finally { workingId.value = '' }
-}
+// async function duplicateDraft(resume: ResumeRow) {
+//   workingId.value = resume.id
+//   try {
+//     await store.duplicateResume(resume)
+//     toast.add({ title: 'Resume duplicated', color: 'success', icon: 'i-lucide-copy-check' })
+//   } catch (error: any) {
+//     toast.add({ title: 'Could not duplicate resume', description: error.message, color: 'error' })
+//   } finally { workingId.value = '' }
+// }
 
 function openDelete(resume: ResumeRow) {
   selected.value = resume
@@ -88,12 +88,12 @@ async function deleteDraft() {
   } finally { workingId.value = '' }
 }
 
-async function downloadDraft(resume: ResumeRow) {
-  workingId.value = resume.id
-  try { await store.downloadResume(resume) }
-  catch (error: any) { toast.add({ title: 'Could not download PDF', description: error.message, color: 'error' }) }
-  finally { workingId.value = '' }
-}
+// async function downloadDraft(resume: ResumeRow) {
+//   workingId.value = resume.id
+//   try { await store.downloadResume(resume) }
+//   catch (error: any) { toast.add({ title: 'Could not download PDF', description: error.message, color: 'error' }) }
+//   finally { workingId.value = '' }
+// }
 </script>
 
 <template>
@@ -102,34 +102,29 @@ async function downloadDraft(resume: ResumeRow) {
       <h1 class="mb-2 text-3xl font-bold text-highlighted">Resume Builder</h1>
       <p class="text-muted">Create targeted, ATS-friendly resumes without changing your candidate profile.</p>
     </div>
-    <div class="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-4">
-      <div><ProfileSidebar active="resumes" /></div>
-      <div class="space-y-5 lg:col-span-3">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div><h2 class="text-xl font-semibold text-highlighted">Your resumes</h2><p class="text-sm text-muted">Each draft is private and saved independently.</p></div>
-          <UButton label="New resume" icon="i-lucide-plus" @click="createOpen = true" />
-        </div>
+    <div class="mx-auto max-w-6xl space-y-5">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 class="text-xl font-semibold text-highlighted">Your resumes</h2><p class="text-sm text-muted">Each draft is private and saved independently.</p></div>
+        <UButton label="New resume" icon="i-lucide-plus" @click="createOpen = true" />
+      </div>
 
-        <UAlert v-if="store.errorMessage" color="error" icon="i-lucide-triangle-alert" :title="store.errorMessage" />
-        <div v-if="store.loading" class="grid gap-4 md:grid-cols-2"><USkeleton v-for="item in 4" :key="item" class="h-44" /></div>
-        <UCard v-else-if="!store.resumes.length">
-          <div class="py-10 text-center"><UIcon name="i-lucide-file-plus-2" class="mx-auto size-11 text-muted" /><h3 class="mt-3 font-semibold text-highlighted">Create your first targeted resume</h3><p class="mx-auto mt-1 max-w-md text-sm text-muted">Start from your profile, import your uploaded CV, or begin with a clean page.</p><UButton class="mt-5" label="Create resume" icon="i-lucide-plus" @click="createOpen = true" /></div>
-        </UCard>
-        <div v-else class="grid gap-4 md:grid-cols-2">
-          <UCard v-for="resume in store.resumes" :key="resume.id">
-            <div class="flex h-full flex-col gap-4">
-              <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="truncate font-semibold text-highlighted">{{ resume.name }}</h3><p class="mt-1 text-xs text-muted">Updated {{ formatUpdated(resume.updated_at) }}</p></div><UBadge label="ATS Classic" color="neutral" variant="subtle" /></div>
-              <p class="line-clamp-2 text-sm text-muted">{{ resume.content.basics.headline || resume.content.basics.summary || 'Add your details and tailor this resume for a role.' }}</p>
-              <div class="mt-auto flex flex-wrap gap-2">
-                <UButton :to="`/resumes/${resume.id}`" label="Edit" icon="i-lucide-pencil" size="sm" />
-                <UButton label="PDF" icon="i-lucide-download" size="sm" color="neutral" variant="outline" :loading="workingId === resume.id" @click="downloadDraft(resume)" />
-                <UButton icon="i-lucide-copy" size="sm" color="neutral" variant="ghost" aria-label="Duplicate resume" @click="duplicateDraft(resume)" />
-                <UButton icon="i-lucide-text-cursor-input" size="sm" color="neutral" variant="ghost" aria-label="Rename resume" @click="openRename(resume)" />
-                <UButton icon="i-lucide-trash-2" size="sm" color="error" variant="ghost" aria-label="Delete resume" @click="openDelete(resume)" />
-              </div>
+      <UAlert v-if="store.errorMessage" color="error" icon="i-lucide-triangle-alert" :title="store.errorMessage" />
+      <div v-if="store.loading" class="grid gap-4 md:grid-cols-2"><USkeleton v-for="item in 4" :key="item" class="h-44" /></div>
+      <UCard v-else-if="!store.resumes.length">
+        <div class="py-10 text-center"><UIcon name="i-lucide-file-plus-2" class="mx-auto size-11 text-muted" /><h3 class="mt-3 font-semibold text-highlighted">Create your first targeted resume</h3><p class="mx-auto mt-1 max-w-md text-sm text-muted">Start from your profile, import your uploaded CV, or begin with a clean page.</p><UButton class="mt-5" label="Create resume" icon="i-lucide-plus" @click="createOpen = true" /></div>
+      </UCard>
+      <div v-else class="grid gap-4 md:grid-cols-2">
+        <UCard v-for="resume in store.resumes" :key="resume.id">
+          <div class="flex h-full flex-col gap-4">
+            <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="truncate font-semibold text-highlighted">{{ resume.name }}</h3><p class="mt-1 text-xs text-muted">Updated {{ formatUpdated(resume.updated_at) }}</p></div><UBadge label="ATS Classic" color="neutral" variant="subtle" /></div>
+            <p class="line-clamp-2 text-sm text-muted">{{ resume.content.basics.headline || resume.content.basics.summary || 'Add your details and tailor this resume for a role.' }}</p>
+            <div class="mt-auto flex flex-wrap gap-2">
+              <UButton :to="`/resumes/${resume.id}`" label="Edit" icon="i-lucide-pencil" size="sm" />
+              <UButton icon="i-lucide-text-cursor-input" size="sm" color="neutral" label="Rename" @click="openRename(resume)" />
+              <UButton icon="i-lucide-trash-2" size="sm" color="error" label="Delete resume" @click="openDelete(resume)" />
             </div>
-          </UCard>
-        </div>
+          </div>
+        </UCard>
       </div>
     </div>
 
