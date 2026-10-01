@@ -22,6 +22,7 @@ export default defineNuxtConfig({
       '/security',
       '/saved-jobs',
       '/applications',
+      '/resumes/**',
       '/company/**'
     ]
   },
@@ -47,4 +48,16 @@ export default defineNuxtConfig({
       CONTACT_EMAIL: process.env.NUXT_PUBLIC_CONTACT_EMAIL
     }
   },
+  nitro: {
+    serverAssets: [{
+      baseName: 'resume-fonts',
+      dir: './assets/resume-fonts'
+    }]
+  },
+  vite: {
+    optimizeDeps: {
+      include: ['@vueuse/integrations/useSortable'],
+      exclude: ['@vueuse/core']
+    }
+  }
 })

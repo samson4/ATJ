@@ -56,6 +56,7 @@ const jobStore = useJobStore()
 const authUser = ref(null);
 const items = ref([
   { label: "Profile", icon: "lucide:user", to: "/profile" },
+  { label: "Resume Builder", icon: "i-lucide-files", to: "/resumes" },
   { label: "Saved Jobs", icon: "i-lucide-bookmark", to: "/saved-jobs" },
   {
     label: "Sign Out",

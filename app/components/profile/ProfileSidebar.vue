@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type SidebarItem = 'profile' | 'applications' | 'savedJobs' | 'security'
+type SidebarItem = 'profile' | 'resumes' | 'applications' | 'savedJobs' | 'security'
 
 const props = defineProps<{
   active: SidebarItem
@@ -41,6 +41,11 @@ const iconClasses = (key: SidebarItem) => {
       <NuxtLink to="/applications" :class="itemClasses('applications')">
         <UIcon name="i-lucide-clipboard-list" :class="iconClasses('applications')" />
         <span :class="textClasses('applications')">Applications</span>
+      </NuxtLink>
+
+      <NuxtLink to="/resumes" :class="itemClasses('resumes')">
+        <UIcon name="i-lucide-files" :class="iconClasses('resumes')" />
+        <span :class="textClasses('resumes')">Resume Builder</span>
       </NuxtLink>
 
       <NuxtLink to="/saved-jobs" :class="itemClasses('savedJobs')">

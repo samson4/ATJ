@@ -6,22 +6,29 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
+    "test": "vitest run",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@fontsource/noto-sans-ethiopic": "^5.2.8",
+    "@internationalized/date": "3.12.3",
     "@nuxt/content": "^3.10.0",
     "@nuxt/ui": "^4.3.0",
     "@nuxtjs/sitemap": "^8.4.0",
     "@pinia/nuxt": "^0.11.2",
     "@supabase/supabase-js": "^2.78.0",
     "@vercel/analytics": "^2.0.1",
+    "@vueuse/integrations": "14.4.0",
     "better-sqlite3": "^12.6.0",
     "date-fns": "^4.1.0",
     "marked": "^17.0.0",
     "nuxt": "^4.2.0",
     "nuxt-studio": "1.0.0",
+    "pdfkit": "^0.17.2",
     "pinia": "^3.0.3",
+    "sortablejs": "^1.15.6",
+    "unpdf": "^1.4.0",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3",
     "zod": "^4.1.12"
@@ -31,6 +38,12 @@
     "reka-ui": "2.10.1"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "tailwindcss/typography"
+    "@nuxt/test-utils": "^3.20.1",
+    "@tailwindcss/typography": "tailwindcss/typography",
+    "@types/pdfkit": "^0.17.3",
+    "happy-dom": "^20.0.5",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.1.3"
   }
 }
