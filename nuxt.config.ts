@@ -41,6 +41,7 @@ export default defineNuxtConfig({
   plugins:["~/plugins/supabase.ts"],
   runtimeConfig: {
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+    resumeBuilderBetaEmails: process.env.NUXT_RESUME_BUILDER_BETA_EMAILS || '',
     public: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,

@@ -11,7 +11,7 @@
     </template>
 
     <NuxtLink
-      v-if="authUser"
+      v-if="authUser && resumeBuilderEnabled"
       to="/resumes"
       class="hidden items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-flex"
       active-class="bg-elevated text-primary"
@@ -65,6 +65,7 @@ const router = useRouter();
 const authStore = useAuthStore()
 const jobStore = useJobStore()
 const authUser = ref<User | null>(null);
+const resumeBuilderEnabled = ref(false)
 const items = ref([
   { label: "Profile", icon: "lucide:user", to: "/profile" },
   { label: "Saved Jobs", icon: "i-lucide-bookmark", to: "/saved-jobs" },
@@ -87,6 +88,18 @@ onMounted(async () => {
     authStore.user = user
     jobStore.fetchSavedJobIds()
     jobStore.fetchAppliedJobIds()
+
+    const { data: { session } } = await $supabase.auth.getSession()
+    if (session?.access_token) {
+      try {
+        const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        resumeBuilderEnabled.value = access.enabled
+      } catch {
+        resumeBuilderEnabled.value = false
+      }
+    }
   }
 });
 
@@ -96,6 +109,7 @@ const signOut = async () => {
   let { error } = await $supabase.auth.signOut();
   authStore.user = {}
   authUser.value = null
+  resumeBuilderEnabled.value = false
   jobStore.clearSavedJobs()
   jobStore.clearAppliedJobs()
   if (error) throw error;
