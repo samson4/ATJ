@@ -13,14 +13,23 @@
     <NuxtLink
       v-if="authUser && resumeBuilderEnabled"
       to="/resumes"
-      class="inline-flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:px-3 sm:text-base"
+      class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       active-class="bg-elevated text-primary"
     >
-      <span class="sm:hidden">Resume</span>
-      <span class="hidden sm:inline">Resume Builder</span>
+      <span>Resume Builder</span>
     </NuxtLink>
 
     <template #right>
+      <UButton
+        v-if="authUser && resumeBuilderEnabled"
+        to="/resumes"
+        label="Resume"
+        icon="i-lucide-file-text"
+        size="sm"
+        color="neutral"
+        variant="ghost"
+        class="lg:hidden"
+      />
       <div v-if="authUser">
         <!-- <UButton v-if="authUser" to="/" color="error"  variant="outline">Sign Out</UButton> -->
         <UDropdownMenu
