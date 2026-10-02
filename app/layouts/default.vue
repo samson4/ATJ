@@ -13,11 +13,11 @@
     <NuxtLink
       v-if="authUser && resumeBuilderEnabled"
       to="/resumes"
-      class="hidden items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-flex"
+      class="inline-flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:px-3 sm:text-base"
       active-class="bg-elevated text-primary"
     >
-     
-      <span>Resume Builder</span>
+      <span class="sm:hidden">Resume</span>
+      <span class="hidden sm:inline">Resume Builder</span>
     </NuxtLink>
 
     <template #right>
