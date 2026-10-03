@@ -3,8 +3,10 @@ import { resumeDocumentSchema, resumeImportResponseSchema, resumeRowSchema } fro
 import type {
   CandidateProfile,
   ResumeCreationSource,
+  ResumeDocument,
   ResumeRow,
-  ResumeSaveStatus
+  ResumeSaveStatus,
+  ResumeTemplateKey
 } from '~~/shared/types/resume'
 import { createEmptyResumeDocument, createResumeFromProfile, sanitizeDownloadName } from '~~/shared/utils/resume'
 
@@ -82,12 +84,16 @@ export const useResumeStore = defineStore('resume', () => {
     }
   }
 
-  async function sourceDocument(source: ResumeCreationSource) {
+  async function prepareResumeSource(source: ResumeCreationSource) {
     const user = await requireUser()
-    if (source === 'blank') return { document: createEmptyResumeDocument(), sourceCvPath: null }
+    if (source === 'blank') {
+      importWarnings.value = []
+      return { document: createEmptyResumeDocument(), sourceCvPath: null }
+    }
 
     const { $supabase } = useNuxtApp()
     if (source === 'profile') {
+      importWarnings.value = []
       const { data, error } = await $supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
       if (error) throw error
       return {
@@ -105,16 +111,21 @@ export const useResumeStore = defineStore('resume', () => {
     return { document: imported.document, sourceCvPath: imported.sourceCvPath }
   }
 
-  async function createResume(name: string, source: ResumeCreationSource) {
-    importWarnings.value = []
+  async function createResume(
+    name: string,
+    source: ResumeCreationSource,
+    templateKey: ResumeTemplateKey,
+    prepared?: { document: ResumeDocument, sourceCvPath: string | null }
+  ) {
+    if (!prepared) importWarnings.value = []
     const { $supabase } = useNuxtApp()
     const user = await requireUser()
-    const resolved = await sourceDocument(source)
+    const resolved = prepared || await prepareResumeSource(source)
     const document = resumeDocumentSchema.parse(resolved.document)
     const { data, error } = await $supabase.from('resumes').insert({
       user_id: user.id,
       name: name.trim() || 'Untitled Resume',
-      template_key: 'ats-classic',
+      template_key: templateKey,
       schema_version: 1,
       content: document,
       source_cv_path: resolved.sourceCvPath
@@ -185,6 +196,7 @@ export const useResumeStore = defineStore('resume', () => {
 
     const id = currentResume.value.id
     const rawName = currentResume.value.name
+    const rawTemplateKey = currentResume.value.template_key
     // Pinia exposes the document as a Vue Proxy. Convert it to plain JSON before
     // validation and transport because structuredClone cannot clone proxies.
     const rawContent = plainResumeContent(currentResume.value.content)
@@ -196,7 +208,7 @@ export const useResumeStore = defineStore('resume', () => {
       throw new Error(errorMessage.value)
     }
     const content = parsedContent.data
-    const snapshot = JSON.stringify({ name: rawName, content: rawContent })
+    const snapshot = JSON.stringify({ name: rawName, template_key: rawTemplateKey, content: rawContent })
     saveStatus.value = 'saving'
     errorMessage.value = ''
 
@@ -205,12 +217,13 @@ export const useResumeStore = defineStore('resume', () => {
       const data = await $fetch<{ updated_at: string }>(`/api/resumes/${id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
-        body: { name, content }
+        body: { name, template_key: rawTemplateKey, content }
       })
       if (currentResume.value?.id === id) {
         currentResume.value.updated_at = data.updated_at
         const latest = JSON.stringify({
           name: currentResume.value.name,
+          template_key: currentResume.value.template_key,
           content: currentResume.value.content
         })
         saveStatus.value = latest === snapshot ? 'saved' : 'dirty'
@@ -262,6 +275,7 @@ export const useResumeStore = defineStore('resume', () => {
     importWarnings,
     fetchResumes,
     fetchResume,
+    prepareResumeSource,
     createResume,
     duplicateResume,
     renameResume,

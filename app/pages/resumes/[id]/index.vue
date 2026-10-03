@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { resumeDocumentSchema } from '~~/shared/schemas/resume'
+import { resumeTemplateByKey } from '~~/shared/data/resumeTemplates'
+import type { ResumeDocument, ResumeTemplateKey } from '~~/shared/types/resume'
 import { useResumeStore } from '~/stores/resume'
 
 definePageMeta({ layout: 'resume', middleware: 'auth' })
@@ -12,8 +14,14 @@ const toast = useToast()
 const mobileView = ref<'edit' | 'preview'>('edit')
 const editorReady = ref(false)
 const downloading = ref(false)
+const templateOpen = ref(false)
+const pendingTemplateKey = ref<ResumeTemplateKey>('ats-classic')
+const templatePreviewDocument = ref<ResumeDocument>()
 const editableSnapshot = computed(() => store.currentResume
-  ? JSON.stringify({ name: store.currentResume.name, content: store.currentResume.content })
+  ? JSON.stringify({ name: store.currentResume.name, template_key: store.currentResume.template_key, content: store.currentResume.content })
+  : '')
+const templateName = computed(() => store.currentResume
+  ? resumeTemplateByKey[store.currentResume.template_key].name
   : '')
 
 const statusPresentation = computed(() => ({
@@ -70,6 +78,19 @@ async function saveNow() {
   try { await store.flushSave() }
   catch (error: any) { toast.add({ title: 'Save failed', description: error.data?.statusMessage || error.message, color: 'error' }) }
 }
+
+function openTemplatePicker() {
+  if (!store.currentResume) return
+  pendingTemplateKey.value = store.currentResume.template_key
+  templatePreviewDocument.value = JSON.parse(JSON.stringify(store.currentResume.content))
+  templateOpen.value = true
+}
+
+function applyTemplate() {
+  if (!store.currentResume) return
+  store.currentResume.template_key = pendingTemplateKey.value
+  templateOpen.value = false
+}
 </script>
 
 <template>
@@ -77,8 +98,10 @@ async function saveNow() {
       <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex min-w-0 items-center gap-3">
           <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" aria-label="Back to resumes" @click="router.push('/resumes')" />
-          <div class="min-w-0"><UInput v-if="store.currentResume" v-model="store.currentResume.name" maxlength="120" variant="none" class="w-full text-lg font-semibold" aria-label="Resume name" /><p class="text-xs text-muted">ATS Classic template</p></div>
+          <div class="min-w-0"><UInput v-if="store.currentResume" v-model="store.currentResume.name" maxlength="120" variant="none" class="w-full text-lg font-semibold" aria-label="Resume name" /><div class="flex items-center gap-1"><p class="text-xs text-muted">{{ templateName }} template</p></div></div>
         </div>
+        <UButton label="Templates" size="md" icon="i-lucide-layout-template" color="primary" variant="subtle" class="px-3" @click="openTemplatePicker" />
+
         <div class="flex flex-wrap items-center gap-2">
           <UBadge v-if="store.currentResume" :label="statusPresentation.label" :color="statusPresentation.color" variant="subtle" :icon="statusPresentation.icon" />
           <UButton v-if="store.saveStatus === 'error'" label="Retry save" icon="i-lucide-refresh-cw" color="error" variant="outline" @click="retrySave" />
@@ -95,8 +118,13 @@ async function saveNow() {
         <div class="mb-4 flex rounded-lg bg-elevated p-1 xl:hidden"><UButton label="Edit" class="flex-1 justify-center" :variant="mobileView === 'edit' ? 'solid' : 'ghost'" @click="mobileView = 'edit'" /><UButton label="Preview" class="flex-1 justify-center" :variant="mobileView === 'preview' ? 'solid' : 'ghost'" @click="mobileView = 'preview'" /></div>
         <div class="grid items-start gap-6 xl:grid-cols-[minmax(400px,0.72fr)_minmax(650px,1.28fr)] 2xl:grid-cols-[minmax(460px,0.68fr)_minmax(794px,1.32fr)]">
           <UCard :class="mobileView === 'preview' ? 'hidden xl:block' : ''"><UForm :schema="resumeDocumentSchema" :state="store.currentResume.content"><ResumeEditor v-model="store.currentResume.content" /></UForm></UCard>
-          <div :class="[mobileView === 'edit' ? 'hidden xl:block' : '', 'rounded-xl bg-elevated p-2 sm:p-4 xl:sticky xl:top-4']"><ResumePdfPreview :document="store.currentResume.content" /></div>
+          <div :class="[mobileView === 'edit' ? 'hidden xl:block' : '', 'rounded-xl bg-elevated p-2 sm:p-4 xl:sticky xl:top-4']"><ResumePdfPreview :document="store.currentResume.content" :template-key="store.currentResume.template_key" /></div>
         </div>
       </template>
+
+      <UModal v-model:open="templateOpen" title="Change template" description="Your resume content stays the same." :ui="{ content: 'max-w-4xl' }">
+        <template #body><ResumeTemplatePicker v-model="pendingTemplateKey" :document="templatePreviewDocument" /></template>
+        <template #footer><div class="flex w-full justify-end gap-2"><UButton label="Cancel" color="neutral" variant="outline" @click="templateOpen = false" /><UButton label="Apply template" icon="i-lucide-check" @click="applyTemplate" /></div></template>
+      </UModal>
   </div>
 </template>

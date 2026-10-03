@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core'
-import type { ResumeDocument } from '~~/shared/types/resume'
+import type { ResumeDocument, ResumeTemplateKey } from '~~/shared/types/resume'
 
-const props = defineProps<{ document: ResumeDocument }>()
+const props = defineProps<{ document: ResumeDocument, templateKey: ResumeTemplateKey }>()
 
 const previewUrl = ref('')
 const loading = ref(true)
@@ -29,7 +29,7 @@ async function generatePreview() {
         Authorization: `Bearer ${session.access_token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(props.document),
+      body: JSON.stringify({ document: props.document, templateKey: props.templateKey }),
       signal: request.signal
     })
     if (!response.ok) {
@@ -56,7 +56,7 @@ async function generatePreview() {
 }
 
 watchDebounced(
-  () => props.document,
+  () => [props.document, props.templateKey],
   () => void generatePreview(),
   { deep: true, debounce: 700, maxWait: 2000, immediate: true }
 )

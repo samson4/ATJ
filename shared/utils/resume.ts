@@ -42,6 +42,89 @@ export function createEmptyResumeDocument(): ResumeDocument {
   }
 }
 
+export function isResumeDocumentEmpty(document: ResumeDocument) {
+  const basicsAreEmpty = [
+    document.basics.fullName,
+    document.basics.email,
+    document.basics.phone,
+    document.basics.location,
+    document.basics.headline
+  ].every(item => !item.trim()) && !richTextToPlainText(document.basics.summary)
+  return basicsAreEmpty
+    && document.experience.length === 0
+    && document.education.length === 0
+    && document.skillGroups.length === 0
+    && document.projects.length === 0
+    && document.certifications.length === 0
+    && document.languages.length === 0
+    && document.links.length === 0
+}
+
+export function createResumeTemplatePreviewDocument(): ResumeDocument {
+  const document = createEmptyResumeDocument()
+  document.basics = {
+    fullName: '[YOUR NAME]',
+    email: '[EMAIL]',
+    phone: '[PHONE]',
+    location: '[LOCATION]',
+    headline: '[PROFESSIONAL TITLE]',
+    summary: '<p>[Write a short summary highlighting your experience, strengths, and career goals.]</p>'
+  }
+  document.skillGroups = [
+    { id: 'sample-skills-1', name: '[TECHNICAL SKILLS]', items: ['Skill one', 'Skill two', 'Skill three'] },
+    { id: 'sample-skills-2', name: '[TOOLS]', items: ['Tool one', 'Tool two', 'Tool three'] }
+  ]
+  document.experience = [
+    {
+      id: 'sample-experience-1',
+      title: '[JOB TITLE]',
+      company: '[COMPANY NAME]',
+      location: '[LOCATION]',
+      startDate: '[START DATE]',
+      endDate: '',
+      current: true,
+      bullets: '<ul><li>[Describe an achievement and its measurable impact.]</li><li>[Highlight a relevant responsibility or project.]</li></ul>'
+    },
+    {
+      id: 'sample-experience-2',
+      title: '[PREVIOUS JOB TITLE]',
+      company: '[COMPANY NAME]',
+      location: '[LOCATION]',
+      startDate: '[START DATE]',
+      endDate: '[END DATE]',
+      current: false,
+      bullets: '<ul><li>[Describe a relevant achievement or contribution.]</li></ul>'
+    }
+  ]
+  document.education = [{
+    id: 'sample-education-1',
+    institution: '[INSTITUTION]',
+    degree: '[DEGREE]',
+    field: '[FIELD OF STUDY]',
+    location: '[LOCATION]',
+    startDate: '[START DATE]',
+    endDate: '[END DATE]',
+    current: false
+  }]
+  document.projects = [{
+    id: 'sample-project-1',
+    name: '[PROJECT NAME]',
+    role: '[YOUR ROLE]',
+    url: '[PROJECT LINK]',
+    startDate: '',
+    endDate: '',
+    bullets: '<ul><li>[Explain what you built and the outcome.]</li></ul>'
+  }]
+  document.certifications = [{
+    id: 'sample-certification-1',
+    name: '[CERTIFICATION]',
+    issuer: '[ISSUER]',
+    issueDate: '[DATE]',
+    credentialUrl: ''
+  }]
+  return document
+}
+
 function value(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }

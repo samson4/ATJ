@@ -25,6 +25,7 @@
     "marked": "^17.0.0",
     "nuxt": "^4.2.0",
     "nuxt-studio": "1.0.0",
+    "pdfjs-dist": "^5.4.296",
     "pdfkit": "^0.17.2",
     "pinia": "^3.0.3",
     "sortablejs": "^1.15.6",

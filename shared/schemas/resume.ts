@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { resumeTemplateKeySchema } from '../data/resumeTemplates'
 
 const text = (max: number) => z.string().trim().max(max)
 const richText = (max: number) => z.preprocess((value) => {
@@ -109,7 +110,7 @@ export const resumeRowSchema = z.object({
   id: z.uuid(),
   user_id: z.uuid(),
   name: text(120).min(1),
-  template_key: z.literal('ats-classic'),
+  template_key: resumeTemplateKeySchema,
   schema_version: z.literal(1),
   content: resumeDocumentSchema,
   source_cv_path: z.string().nullable(),
@@ -119,7 +120,13 @@ export const resumeRowSchema = z.object({
 
 export const resumeSaveRequestSchema = z.object({
   name: text(120).min(1),
+  template_key: resumeTemplateKeySchema,
   content: resumeDocumentSchema
+})
+
+export const resumePreviewRequestSchema = z.object({
+  document: resumeDocumentSchema,
+  templateKey: resumeTemplateKeySchema
 })
 
 export const resumeImportResponseSchema = z.object({
@@ -139,3 +146,4 @@ export type ResumeProject = z.output<typeof resumeProjectSchema>
 export type ResumeCertification = z.output<typeof resumeCertificationSchema>
 export type ResumeLanguage = z.output<typeof resumeLanguageSchema>
 export type ResumeLink = z.output<typeof resumeLinkSchema>
+export type ResumePreviewRequest = z.output<typeof resumePreviewRequestSchema>

@@ -1,4 +1,5 @@
 import { resumeDocumentSchema } from '~~/shared/schemas/resume'
+import { resumeTemplateKeySchema } from '~~/shared/data/resumeTemplates'
 import { sanitizeDownloadName } from '~~/shared/utils/resume'
 import { renderResumePdf } from '../../../utils/resumePdf'
 import { requireResumeUser } from '../../../utils/resumeAuth'
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabase
     .from('resumes')
-    .select('name, content')
+    .select('name, content, template_key')
     .eq('id', resumeId)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -23,7 +24,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 422, statusMessage: 'This resume contains invalid data and cannot be exported' })
   }
 
-  const pdf = await renderResumePdf(parsed.data)
+  const templateKey = resumeTemplateKeySchema.safeParse(data.template_key)
+  if (!templateKey.success) {
+    throw createError({ statusCode: 422, statusMessage: 'This resume uses an unsupported template' })
+  }
+
+  const pdf = await renderResumePdf(parsed.data, templateKey.data)
   setResponseHeader(event, 'Content-Type', 'application/pdf')
   setResponseHeader(event, 'Content-Disposition', `attachment; filename="${sanitizeDownloadName(data.name)}"`)
   setResponseHeader(event, 'Cache-Control', 'private, no-store')

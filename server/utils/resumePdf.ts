@@ -1,21 +1,61 @@
 import PDFDocument from 'pdfkit'
-import type { ResumeDocument, ResumeSectionKey } from '~~/shared/types/resume'
+import type { ResumeDocument, ResumeSectionKey, ResumeTemplateKey } from '~~/shared/types/resume'
 import { formatResumeDate, formatResumeDateRange, resumeHasSectionContent, sanitizeRichText } from '~~/shared/utils/resume'
 
-const PAGE_MARGIN = 44
-const BODY_SIZE = 9
-const ROW_TITLE_SIZE = 10
 const TEXT_COLOR = '#000000'
 
 const sectionTitles: Record<ResumeSectionKey, string> = {
-  summary: 'Professional Summary',
-  experience: 'Experience',
-  education: 'Education',
-  skills: 'Skills',
-  projects: 'Projects',
-  certifications: 'Certifications',
-  languages: 'Languages',
-  links: 'Links'
+  summary: 'Professional Summary', experience: 'Experience', education: 'Education', skills: 'Skills',
+  projects: 'Projects', certifications: 'Certifications', languages: 'Languages', links: 'Links'
+}
+
+type TemplateStyle = 'classic' | 'minimal' | 'centered' | 'executive' | 'compact' | 'structured'
+
+export type ResumeTemplateLayout = {
+  pageMargin: number
+  bodySize: number
+  rowTitleSize: number
+  nameSize: number
+  headlineSize: number
+  detailsIndent: number
+  richLineGap: number
+  rowGap: number
+  style: TemplateStyle
+  contactSeparator: string
+  metaAlign: 'left' | 'right'
+}
+
+export const resumeTemplateLayouts: Record<ResumeTemplateKey, ResumeTemplateLayout> = {
+  'ats-classic': {
+    pageMargin: 44, bodySize: 9, rowTitleSize: 10, nameSize: 22, headlineSize: 11,
+    detailsIndent: 8, richLineGap: 1, rowGap: 0.35, style: 'classic',
+    contactSeparator: '  •  ', metaAlign: 'left'
+  },
+  'modern-minimal': {
+    pageMargin: 52, bodySize: 9.5, rowTitleSize: 10.5, nameSize: 28, headlineSize: 11,
+    detailsIndent: 0, richLineGap: 1.8, rowGap: 0.65, style: 'minimal',
+    contactSeparator: '   |   ', metaAlign: 'left'
+  },
+  'centered-professional': {
+    pageMargin: 48, bodySize: 9, rowTitleSize: 10, nameSize: 24, headlineSize: 10.5,
+    detailsIndent: 8, richLineGap: 1.2, rowGap: 0.45, style: 'centered',
+    contactSeparator: '   •   ', metaAlign: 'left'
+  },
+  executive: {
+    pageMargin: 46, bodySize: 9, rowTitleSize: 10.5, nameSize: 24, headlineSize: 10,
+    detailsIndent: 8, richLineGap: 1.1, rowGap: 0.5, style: 'executive',
+    contactSeparator: '  |  ', metaAlign: 'right'
+  },
+  compact: {
+    pageMargin: 36, bodySize: 8, rowTitleSize: 9, nameSize: 20, headlineSize: 9.5,
+    detailsIndent: 6, richLineGap: 0.4, rowGap: 0.15, style: 'compact',
+    contactSeparator: ' • ', metaAlign: 'left'
+  },
+  structured: {
+    pageMargin: 44, bodySize: 8.8, rowTitleSize: 10, nameSize: 22, headlineSize: 10.5,
+    detailsIndent: 8, richLineGap: 1, rowGap: 0.4, style: 'structured',
+    contactSeparator: '  •  ', metaAlign: 'left'
+  }
 }
 
 type RichTextSegment = {
@@ -47,11 +87,8 @@ function richTextSegments(content: string) {
     if (!text) return
     const previous = segments.at(-1)
     if (previous && previous.bold === state.bold && previous.oblique === state.oblique
-      && previous.underline === state.underline && previous.strike === state.strike) {
-      previous.text += text
-    } else {
-      segments.push({ text, ...state })
-    }
+      && previous.underline === state.underline && previous.strike === state.strike) previous.text += text
+    else segments.push({ text, ...state })
   }
   const newline = () => {
     if (segments.length && !segments.at(-1)?.text.endsWith('\n')) append('\n')
@@ -88,7 +125,10 @@ function richTextSegments(content: string) {
   return segments
 }
 
-export async function renderResumePdf(document: ResumeDocument): Promise<Buffer> {
+export async function renderResumePdf(document: ResumeDocument, templateKey: ResumeTemplateKey): Promise<Buffer> {
+  const layout = resumeTemplateLayouts[templateKey]
+  if (!layout) throw new Error(`Unsupported resume template: ${templateKey}`)
+
   const fontStorage = useStorage('assets:resume-fonts')
   const [latinFont, latinBoldFont, ethiopicFont, ethiopicBoldFont] = await Promise.all([
     fontStorage.getItemRaw('noto-sans-ethiopic-latin-400-normal.woff'),
@@ -96,13 +136,10 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
     fontStorage.getItemRaw('noto-sans-ethiopic-ethiopic-400-normal.woff'),
     fontStorage.getItemRaw('noto-sans-ethiopic-ethiopic-700-normal.woff')
   ])
-  if (!latinFont || !latinBoldFont || !ethiopicFont || !ethiopicBoldFont) {
-    throw new Error('Resume PDF fonts are unavailable')
-  }
+  if (!latinFont || !latinBoldFont || !ethiopicFont || !ethiopicBoldFont) throw new Error('Resume PDF fonts are unavailable')
 
   const pdf = new PDFDocument({
-    size: 'A4',
-    margin: PAGE_MARGIN,
+    size: 'A4', margin: layout.pageMargin,
     info: { Title: `${document.basics.fullName || 'Resume'} Resume` }
   })
   const chunks: Buffer[] = []
@@ -117,7 +154,12 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
   pdf.registerFont('NotoEthiopic', Buffer.from(ethiopicFont))
   pdf.registerFont('NotoEthiopicBold', Buffer.from(ethiopicBoldFont))
 
-  const contentWidth = () => pdf.page.width - pdf.page.margins.left - pdf.page.margins.right
+  const contentLeft = () => pdf.page.margins.left
+  const contentRight = () => pdf.page.width - pdf.page.margins.right
+  const contentWidth = () => contentRight() - contentLeft()
+  const ensureSpace = (height: number) => {
+    if (pdf.y + height > pdf.page.height - pdf.page.margins.bottom) pdf.addPage()
+  }
   const font = (value: string, bold = false) => {
     pdf.font(hasEthiopic(value) ? (bold ? 'NotoEthiopicBold' : 'NotoEthiopic') : (bold ? 'NotoBold' : 'Noto'))
   }
@@ -125,14 +167,17 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
     font(value, bold)
     pdf.text(value, options)
   }
-  const drawRichText = (content: string, indent = 0) => {
+  const drawRule = (y: number, start = contentLeft(), end = contentRight(), width = 0.7) => {
+    pdf.strokeColor(TEXT_COLOR).lineWidth(width).moveTo(start, y).lineTo(end, y).stroke()
+  }
+  const drawRichText = (content: string, indent = layout.detailsIndent) => {
     const segments = richTextSegments(content)
     if (!segments.length) return
-    pdf.fontSize(BODY_SIZE).fillColor(TEXT_COLOR)
+    pdf.fontSize(layout.bodySize).fillColor(TEXT_COLOR)
     segments.forEach((segment, index) => {
       font(segment.text, segment.bold)
       pdf.text(segment.text, index === 0 ? {
-        width: contentWidth(), indent, paragraphGap: 2, lineGap: 1,
+        width: contentWidth(), indent, paragraphGap: 2, lineGap: layout.richLineGap,
         oblique: segment.oblique, underline: segment.underline, strike: segment.strike,
         continued: index < segments.length - 1
       } : {
@@ -141,52 +186,165 @@ export async function renderResumePdf(document: ResumeDocument): Promise<Buffer>
       })
     })
   }
+
   const heading = (label: string) => {
-    pdf.moveDown(0.75).fillColor(TEXT_COLOR).fontSize(ROW_TITLE_SIZE)
-    text(label.toUpperCase(), { characterSpacing: 1 }, true)
-    pdf.moveDown(0.2).strokeColor(TEXT_COLOR).lineWidth(0.7)
-      .moveTo(pdf.page.margins.left, pdf.y).lineTo(pdf.page.width - pdf.page.margins.right, pdf.y).stroke()
-    pdf.moveDown(0.35).fillColor(TEXT_COLOR)
+    ensureSpace(layout.style === 'structured' ? 46 : 38)
+    pdf.fillColor(TEXT_COLOR)
+    if (layout.style === 'classic') {
+      pdf.moveDown(0.75).fontSize(layout.rowTitleSize)
+      text(label.toUpperCase(), { characterSpacing: 1 }, true)
+      pdf.moveDown(0.2)
+      drawRule(pdf.y)
+      pdf.moveDown(0.35)
+    } else if (layout.style === 'minimal') {
+      pdf.moveDown(1.1).fontSize(12)
+      text(label, {}, true)
+      pdf.moveDown(0.45)
+    } else if (layout.style === 'centered') {
+      pdf.moveDown(0.9).fontSize(10)
+      font(label, true)
+      const top = pdf.y
+      const labelWidth = pdf.widthOfString(label) + 22
+      const sideWidth = Math.max(0, (contentWidth() - labelWidth) / 2)
+      drawRule(top + 6, contentLeft(), contentLeft() + sideWidth, 0.6)
+      drawRule(top + 6, contentRight() - sideWidth, contentRight(), 0.6)
+      text(label, { align: 'center' }, true)
+      pdf.moveDown(0.4)
+    } else if (layout.style === 'executive') {
+      pdf.moveDown(0.8)
+      drawRule(pdf.y, contentLeft(), contentRight(), 1)
+      drawRule(pdf.y + 3, contentLeft(), contentRight(), 0.35)
+      pdf.y += 8
+      pdf.fontSize(10.5)
+      text(label.toUpperCase(), { characterSpacing: 1.4 }, true)
+      pdf.moveDown(0.28)
+    } else if (layout.style === 'compact') {
+      pdf.moveDown(0.45).fontSize(9)
+      text(label.toUpperCase(), { characterSpacing: 0.7 }, true)
+      drawRule(pdf.y - 1, contentLeft(), contentLeft() + pdf.widthOfString(label.toUpperCase()), 0.8)
+      pdf.moveDown(0.18)
+    } else {
+      pdf.moveDown(0.75)
+      const top = pdf.y
+      const height = 19
+      pdf.lineWidth(0.8).strokeColor(TEXT_COLOR).rect(contentLeft(), top, contentWidth(), height).stroke()
+      font(label, true)
+      pdf.fontSize(9.5).text(label.toUpperCase(), contentLeft() + 7, top + 4, {
+        width: contentWidth() - 14, characterSpacing: 0.8
+      })
+      pdf.y = top + height + 5
+    }
   }
+
   const row = (primary: string, secondary: string, meta: string, details = '') => {
-    pdf.fontSize(ROW_TITLE_SIZE).fillColor(TEXT_COLOR)
-    text(primary || secondary, { continued: Boolean(primary && secondary) }, true)
-    if (primary && secondary) {
-      pdf.fontSize(BODY_SIZE)
-      text(`  |  ${secondary}`)
+    ensureSpace(details ? 54 : 32)
+    pdf.fontSize(layout.rowTitleSize).fillColor(TEXT_COLOR)
+    if (layout.style === 'executive' && meta) {
+      const top = pdf.y
+      pdf.fontSize(layout.bodySize)
+      font(meta)
+      const metaWidth = Math.min(
+        contentWidth() * 0.46,
+        Math.max(contentWidth() * 0.32, pdf.widthOfString(meta) + 6)
+      )
+      const columnGap = 12
+      const titleWidth = contentWidth() - metaWidth - columnGap
+
+      pdf.fontSize(layout.rowTitleSize)
+      font(primary || secondary, true)
+      pdf.text(primary || secondary, contentLeft(), top, {
+        width: titleWidth,
+        continued: Boolean(primary && secondary)
+      })
+      if (primary && secondary) {
+        pdf.fontSize(layout.bodySize)
+        text(`  |  ${secondary}`)
+      }
+      const titleBottom = pdf.y
+
+      pdf.fontSize(layout.bodySize).fillColor(TEXT_COLOR)
+      font(meta)
+      pdf.text(meta, contentLeft() + titleWidth + columnGap, top, {
+        width: metaWidth,
+        align: 'right',
+        oblique: true
+      })
+      pdf.y = Math.max(titleBottom, pdf.y)
+      pdf.x = contentLeft()
+    } else {
+      text(primary || secondary, { continued: Boolean(primary && secondary) }, true)
+      if (primary && secondary) {
+        pdf.fontSize(layout.bodySize)
+        text(layout.style === 'minimal' ? `  —  ${secondary}` : `  |  ${secondary}`)
+      }
+      if (meta) {
+        pdf.fontSize(layout.bodySize).fillColor(TEXT_COLOR)
+        text(meta, { oblique: true, align: layout.metaAlign })
+      }
     }
-    if (meta) {
-      pdf.fontSize(BODY_SIZE).fillColor(TEXT_COLOR)
-      text(meta, { oblique: true })
+    drawRichText(details)
+    if (layout.style === 'structured') {
+      pdf.moveDown(0.25)
+      drawRule(pdf.y, contentLeft(), contentRight(), 0.35)
     }
-    drawRichText(details, 8)
-    pdf.moveDown(0.35)
+    pdf.moveDown(layout.rowGap)
   }
 
   const basics = document.basics
-  pdf.fillColor(TEXT_COLOR).fontSize(22)
-  text(basics.fullName || 'Your Name', {}, true)
-  if (basics.headline) {
-    pdf.fontSize(11).fillColor(TEXT_COLOR)
-    text(basics.headline)
-  }
-  const contact = [basics.email, basics.phone, basics.location].filter(Boolean).join('  •  ')
-  if (contact) {
-    pdf.moveDown(0.25).fontSize(BODY_SIZE).fillColor(TEXT_COLOR)
-    text(contact)
+  const contact = [basics.email, basics.phone, basics.location].filter(Boolean).join(layout.contactSeparator)
+  pdf.fillColor(TEXT_COLOR)
+  if (layout.style === 'centered') {
+    pdf.fontSize(layout.nameSize)
+    text(basics.fullName || 'Your Name', { align: 'center' }, true)
+    if (basics.headline) {
+      pdf.fontSize(layout.headlineSize)
+      text(basics.headline, { align: 'center' })
+    }
+    if (contact) {
+      pdf.moveDown(0.3).fontSize(layout.bodySize)
+      text(contact, { align: 'center' })
+    }
+  } else if (layout.style === 'executive') {
+    pdf.fontSize(layout.nameSize)
+    text((basics.fullName || 'Your Name').toUpperCase(), { characterSpacing: 1.3 }, true)
+    if (basics.headline) {
+      pdf.fontSize(layout.headlineSize)
+      text(basics.headline.toUpperCase(), { characterSpacing: 0.7 })
+    }
+    if (contact) {
+      pdf.moveDown(0.25).fontSize(layout.bodySize)
+      text(contact)
+    }
+    pdf.moveDown(0.45)
+    drawRule(pdf.y, contentLeft(), contentRight(), 1.2)
+    drawRule(pdf.y + 3, contentLeft(), contentRight(), 0.4)
+    pdf.y += 5
+  } else {
+    pdf.fontSize(layout.nameSize)
+    text(basics.fullName || 'Your Name', {}, true)
+    if (basics.headline) {
+      pdf.fontSize(layout.headlineSize)
+      text(basics.headline)
+    }
+    if (contact) {
+      pdf.moveDown(layout.style === 'minimal' ? 0.45 : 0.25).fontSize(layout.bodySize)
+      text(contact)
+    }
+    if (layout.style === 'structured') {
+      pdf.moveDown(0.4)
+      drawRule(pdf.y, contentLeft(), contentRight(), 1)
+    }
   }
 
   for (const section of document.sectionOrder) {
     if (!resumeHasSectionContent(document, section)) continue
-
     if (section === 'summary') {
       heading(sectionTitles[section])
-      drawRichText(basics.summary)
+      drawRichText(basics.summary, layout.style === 'minimal' ? 0 : layout.detailsIndent)
     } else if (section === 'experience') {
       heading(sectionTitles[section])
       document.experience.forEach(item => row(
-        item.title,
-        item.company,
+        item.title, item.company,
         [item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' • '),
         item.bullets
       ))

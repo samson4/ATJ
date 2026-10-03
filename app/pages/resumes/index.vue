@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { ResumeCreationSource, ResumeRow } from '~~/shared/types/resume'
+import type { ResumeCreationSource, ResumeDocument, ResumeRow, ResumeTemplateKey } from '~~/shared/types/resume'
+import { resumeTemplateByKey } from '~~/shared/data/resumeTemplates'
 import { useResumeStore } from '~/stores/resume'
 
 definePageMeta({ layout: 'default', middleware: 'auth' })
@@ -16,24 +17,58 @@ const workingId = ref('')
 const selected = ref<ResumeRow | null>(null)
 const newName = ref('Targeted Resume')
 const renameValue = ref('')
-const creationSource = ref<ResumeCreationSource>('profile')
+const creationSource = ref<ResumeCreationSource>('blank')
+const templateKey = ref<ResumeTemplateKey>('ats-classic')
+const creationPreviewDocument = ref<ResumeDocument>()
+const creationPreviewLoading = ref(false)
+const creationPreviewError = ref('')
+const preparedCreation = ref<{
+  source: ResumeCreationSource
+  document: ResumeDocument
+  sourceCvPath: string | null
+}>()
+let preparationGeneration = 0
 
 const creationOptions = [
+  { label: 'Blank resume', value: 'blank', description: 'Start with empty sections.' },
   { label: 'From profile', value: 'profile', description: 'Copy your profile details into a new independent draft.' },
   { label: 'Import uploaded CV', value: 'cv', description: 'Extract editable content from the PDF saved in your profile.' },
-  { label: 'Blank resume', value: 'blank', description: 'Start with empty sections.' }
 ]
 
 onMounted(() => store.fetchResumes())
+
+watch([createOpen, creationSource], async ([open, source]) => {
+  if (!open) return
+  const activeGeneration = ++preparationGeneration
+  creationPreviewLoading.value = true
+  creationPreviewError.value = ''
+  creationPreviewDocument.value = undefined
+  preparedCreation.value = undefined
+  try {
+    const resolved = await store.prepareResumeSource(source)
+    if (activeGeneration !== preparationGeneration) return
+    creationPreviewDocument.value = resolved.document
+    preparedCreation.value = { source, ...resolved }
+  } catch (error: any) {
+    if (activeGeneration !== preparationGeneration) return
+    creationPreviewError.value = error.data?.statusMessage || error.message || 'Could not prepare a template preview.'
+  } finally {
+    if (activeGeneration === preparationGeneration) creationPreviewLoading.value = false
+  }
+})
 
 function formatUpdated(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
 async function createDraft() {
+  if (creationPreviewLoading.value) return
   creating.value = true
   try {
-    const resume = await store.createResume(newName.value, creationSource.value)
+    const prepared = preparedCreation.value?.source === creationSource.value
+      ? { document: preparedCreation.value.document, sourceCvPath: preparedCreation.value.sourceCvPath }
+      : undefined
+    const resume = await store.createResume(newName.value, creationSource.value, templateKey.value, prepared)
     createOpen.value = false
     await router.push(`/resumes/${resume.id}`)
   } catch (error: any) {
@@ -116,21 +151,21 @@ async function deleteDraft() {
       <div v-else class="grid gap-4 md:grid-cols-2">
         <UCard v-for="resume in store.resumes" :key="resume.id">
           <div class="flex h-full flex-col gap-4">
-            <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="truncate font-semibold text-highlighted">{{ resume.name }}</h3><p class="mt-1 text-xs text-muted">Updated {{ formatUpdated(resume.updated_at) }}</p></div><UBadge label="ATS Classic" color="neutral" variant="subtle" /></div>
+            <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="truncate font-semibold text-highlighted">{{ resume.name }}</h3><p class="mt-1 text-xs text-muted">Updated {{ formatUpdated(resume.updated_at) }}</p></div><UBadge :label="resumeTemplateByKey[resume.template_key].name" color="neutral" variant="subtle" /></div>
             <p class="line-clamp-2 text-sm text-muted">{{ resume.content.basics.headline || resume.content.basics.summary || 'Add your details and tailor this resume for a role.' }}</p>
-            <div class="mt-auto flex flex-wrap gap-2">
+            <div class="mt-auto flex flex-wrap gap-2 justify-end">
               <UButton :to="`/resumes/${resume.id}`" label="Edit" icon="i-lucide-pencil" size="sm" />
               <UButton icon="i-lucide-text-cursor-input" size="sm" color="neutral" label="Rename" @click="openRename(resume)" />
-              <UButton icon="i-lucide-trash-2" size="sm" color="error" label="Delete resume" @click="openDelete(resume)" />
+              <UButton icon="i-lucide-trash-2" size="sm" color="error" label="Delete" @click="openDelete(resume)" />
             </div>
           </div>
         </UCard>
       </div>
     </div>
 
-    <UModal v-model:open="createOpen" title="Create a resume" description="Choose how you want to start.">
-      <template #body><div class="space-y-5"><UFormField label="Resume name"><UInput v-model="newName" maxlength="120" class="w-full" /></UFormField><URadioGroup v-model="creationSource" :items="creationOptions" /></div></template>
-      <template #footer><div class="flex w-full justify-end gap-2"><UButton label="Cancel" color="neutral" variant="outline" @click="createOpen = false" /><UButton label="Create resume" :loading="creating" @click="createDraft" /></div></template>
+    <UModal v-model:open="createOpen" title="Create a resume" description="Choose how you want to start." :ui="{ content: 'max-w-4xl' }">
+      <template #body><div class="space-y-6"><UFormField label="Resume name"><UInput v-model="newName" maxlength="120" class="w-full" /></UFormField><URadioGroup v-model="creationSource" :items="creationOptions" /><UAlert v-if="creationPreviewError" color="error" icon="i-lucide-file-warning" title="Preview unavailable" :description="creationPreviewError" /><ResumeTemplatePicker v-model="templateKey" :document="creationPreviewDocument" :loading="creationPreviewLoading" /></div></template>
+      <template #footer><div class="flex w-full justify-end gap-2"><UButton label="Cancel" color="neutral" variant="outline" @click="createOpen = false" /><UButton label="Create resume" :loading="creating" :disabled="creationPreviewLoading" @click="createDraft" /></div></template>
     </UModal>
     <UModal v-model:open="renameOpen" title="Rename resume">
       <template #body><UFormField label="Resume name"><UInput v-model="renameValue" maxlength="120" class="w-full" @keyup.enter="renameDraft" /></UFormField></template>

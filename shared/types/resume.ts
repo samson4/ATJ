@@ -12,6 +12,8 @@ export type {
   ResumeSkillGroup
 } from '../schemas/resume'
 
+export type { ResumeTemplateDefinition, ResumeTemplateKey } from '../data/resumeTemplates'
+
 export type ResumeSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 export type ResumeCreationSource = 'profile' | 'cv' | 'blank'
 
