@@ -105,7 +105,7 @@ function applyTemplate() {
         <div class="flex flex-wrap items-center gap-2">
           <UBadge v-if="store.currentResume" :label="statusPresentation.label" :color="statusPresentation.color" variant="subtle" :icon="statusPresentation.icon" />
           <UButton v-if="store.saveStatus === 'error'" label="Retry save" icon="i-lucide-refresh-cw" color="error" variant="outline" @click="retrySave" />
-          <UButton label="Save" icon="i-lucide-save" color="neutral" variant="outline" :loading="store.saveStatus === 'saving'" :disabled="!store.currentResume || store.saveStatus === 'saved'" @click="saveNow" />
+          <!-- <UButton label="Save" icon="i-lucide-save" color="neutral" variant="outline" :loading="store.saveStatus === 'saving'" :disabled="!store.currentResume || store.saveStatus === 'saved'" @click="saveNow" /> -->
           <UButton label="Download PDF" icon="i-lucide-download" :loading="downloading" :disabled="!store.currentResume" @click="download" />
         </div>
       </div>

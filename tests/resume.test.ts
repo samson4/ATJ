@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { describe, expect, it, vi } from 'vitest'
-import { resumeDocumentSchema, resumePreviewRequestSchema, resumeSaveRequestSchema } from '../shared/schemas/resume'
+import { resumeDocumentSchema, resumeImportResponseSchema, resumePreviewRequestSchema, resumeSaveRequestSchema } from '../shared/schemas/resume'
 import { resumeTemplateKeySchema, resumeTemplates } from '../shared/data/resumeTemplates'
 import type { ResumeTemplateKey } from '../shared/types/resume'
 import { createEmptyResumeDocument, createResumeFromProfile, createResumeTemplatePreviewDocument, formatResumeDate, formatResumeDateRange, isResumeDocumentEmpty, richTextToPlainText } from '../shared/utils/resume'
@@ -48,6 +48,16 @@ describe('resume templates', () => {
     expect(resumeSaveRequestSchema.safeParse({ name: 'Resume', template_key: 'compact', content }).success).toBe(true)
     expect(resumeSaveRequestSchema.safeParse({ name: 'Resume', template_key: 'unknown', content }).success).toBe(false)
     expect(resumeSaveRequestSchema.safeParse({ name: 'Resume', content }).success).toBe(false)
+  })
+
+  it('distinguishes a ready CV import from one that requires an upload', () => {
+    const document = createEmptyResumeDocument()
+    expect(resumeImportResponseSchema.safeParse({
+      status: 'ready', document, warnings: [], sourceCvPath: 'user/cv/resume.pdf'
+    }).success).toBe(true)
+    expect(resumeImportResponseSchema.safeParse({
+      status: 'cv-required', warning: 'Upload a PDF CV to continue.'
+    }).success).toBe(true)
   })
 
   it('renders every layout with rich text and Ethiopic content', async () => {

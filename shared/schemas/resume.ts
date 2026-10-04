@@ -129,11 +129,18 @@ export const resumePreviewRequestSchema = z.object({
   templateKey: resumeTemplateKeySchema
 })
 
-export const resumeImportResponseSchema = z.object({
-  document: resumeDocumentSchema,
-  warnings: z.array(z.string()),
-  sourceCvPath: z.string()
-})
+export const resumeImportResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ready'),
+    document: resumeDocumentSchema,
+    warnings: z.array(z.string()),
+    sourceCvPath: z.string()
+  }),
+  z.object({
+    status: z.literal('cv-required'),
+    warning: z.string()
+  })
+])
 
 export type ResumeDocument = z.output<typeof resumeDocumentSchema>
 export type ResumeRow = z.output<typeof resumeRowSchema>

@@ -5,6 +5,7 @@
 .nitro
 .cache
 dist
+.vercel
 
 # Node dependencies
 node_modules
@@ -26,7 +27,8 @@ logs
 
 #services
 services/*
-# supabase
+# Database files
+*.sql
+
+# Supabase
 supabase/*
-!supabase/resumes.sql
-!supabase/profile-documents-storage.sql

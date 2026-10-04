@@ -11,7 +11,7 @@ const route = useRoute()
 
 
 const { data: page } = await useAsyncData('index', () => {
-  return queryCollection('content').first()
+  return queryCollection('index').first()
 })
 
 // --- State ---
@@ -24,11 +24,14 @@ type StoredDateRange = {
   start?: string
   end?: string
 }
-
+const resumeBuilderEnabled = ref(false)
 const dateRange = useState<StoredDateRange>('job-browser-date-range', () => ({}))
 const selectedWorkplace = useState<any[]>('job-browser-workplace', () => [])
 const selectedType = useState<any[]>('job-browser-type', () => [])
 const selectedTag = useState<any[]>('job-browser-tags', () => [])
+const heroLinks = computed(() => page.value?.links?.filter(
+  link => link.to !== '/resumes' || resumeBuilderEnabled.value
+) ?? [])
 // --- Options Configuration ---
 const workplaceOptions = [
   { label: 'Remote', value: 'Remote' },
@@ -175,11 +178,23 @@ const jobDetailDrawerOpen = computed({
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   syncMobileView()
   mobileMediaQuery.addEventListener('change', syncMobileView)
   restoreScrollPosition()
+
+  const { data: { session } } = await $supabase.auth.getSession()
+  if (!session?.access_token) return
+
+  try {
+    const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    })
+    resumeBuilderEnabled.value = access.enabled
+  } catch {
+    resumeBuilderEnabled.value = false
+  }
 })
 
 onBeforeUnmount(() => {
@@ -269,6 +284,7 @@ const cancelDateFilter = async () => {
   <UPageHero
     class="hidden md:block"
     :title="page?.title"
+    :links="heroLinks"
   />
     <div
       style="background-image: url('/atj.jpeg');"

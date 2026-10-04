@@ -10,14 +10,14 @@
 
     </template>
 
-    <NuxtLink
+    <!-- <NuxtLink
       v-if="authUser && resumeBuilderEnabled"
       to="/resumes"
       class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-toned transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       active-class="bg-elevated text-primary"
     >
       <span>Resume Builder</span>
-    </NuxtLink>
+    </NuxtLink> -->
 
     <template #right>
       <NuxtLink

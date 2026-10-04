@@ -15,7 +15,10 @@ export default defineEventHandler(async (event) => {
 
   if (profileError) throw createError({ statusCode: 500, statusMessage: 'Could not load your profile CV' })
   if (!profile?.cv_file_path) {
-    throw createError({ statusCode: 404, statusMessage: 'Upload a PDF CV in your profile before importing it' })
+    return {
+      status: 'cv-required' as const,
+      warning: 'Upload a PDF CV to continue importing it into your resume.'
+    }
   }
 
   const { data: file, error: downloadError } = await supabase.storage
@@ -42,6 +45,7 @@ export default defineEventHandler(async (event) => {
     }
 
     return {
+      status: 'ready' as const,
       ...parseResumeText(text, user.email || ''),
       sourceCvPath: profile.cv_file_path
     }

@@ -50,6 +50,9 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
+    prerender: {
+      routes: ['/']
+    },
     serverAssets: [{
       baseName: 'resume-fonts',
       dir: './assets/resume-fonts'

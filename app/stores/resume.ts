@@ -10,6 +10,18 @@ import type {
 } from '~~/shared/types/resume'
 import { createEmptyResumeDocument, createResumeFromProfile, sanitizeDownloadName } from '~~/shared/utils/resume'
 
+const CV_BUCKET = 'profile-documents'
+const CV_MIME_TYPE = 'application/pdf'
+const MAX_CV_SIZE = 10 * 1024 * 1024
+
+function sanitizeCvFileName(fileName: string) {
+  return fileName
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120) || 'cv.pdf'
+}
+
 export const useResumeStore = defineStore('resume', () => {
   const resumes = ref<ResumeRow[]>([])
   const currentResume = ref<ResumeRow | null>(null)
@@ -88,7 +100,7 @@ export const useResumeStore = defineStore('resume', () => {
     const user = await requireUser()
     if (source === 'blank') {
       importWarnings.value = []
-      return { document: createEmptyResumeDocument(), sourceCvPath: null }
+      return { status: 'ready' as const, document: createEmptyResumeDocument(), sourceCvPath: null }
     }
 
     const { $supabase } = useNuxtApp()
@@ -97,18 +109,64 @@ export const useResumeStore = defineStore('resume', () => {
       const { data, error } = await $supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
       if (error) throw error
       return {
+        status: 'ready' as const,
         document: createResumeFromProfile(data as CandidateProfile | null, user.email || ''),
         sourceCvPath: null
       }
     }
 
+    importWarnings.value = []
     const token = await accessToken()
     const imported = resumeImportResponseSchema.parse(await $fetch('/api/resumes/import-cv', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` }
     }))
+    if (imported.status === 'cv-required') return imported
     importWarnings.value = imported.warnings
-    return { document: imported.document, sourceCvPath: imported.sourceCvPath }
+    return { status: 'ready' as const, document: imported.document, sourceCvPath: imported.sourceCvPath }
+  }
+
+  async function uploadProfileCv(file: File) {
+    if ((file.type && file.type !== CV_MIME_TYPE) || !file.name.toLowerCase().endsWith('.pdf')) {
+      throw new Error('CV must be a PDF file.')
+    }
+    if (file.size > MAX_CV_SIZE) throw new Error('CV must be 10 MB or smaller.')
+
+    const { $supabase } = useNuxtApp()
+    const user = await requireUser()
+    const { data: profile, error: profileLookupError } = await $supabase
+      .from('profiles')
+      .select('cv_file_path')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (profileLookupError) throw profileLookupError
+
+    const previousCvPath = profile?.cv_file_path || ''
+    const cvPath = `${user.id}/cv/${Date.now()}-${sanitizeCvFileName(file.name)}`
+    const { error: uploadError } = await $supabase.storage
+      .from(CV_BUCKET)
+      .upload(cvPath, file, { contentType: CV_MIME_TYPE, upsert: false })
+    if (uploadError) throw uploadError
+
+    const { error: profileError } = await $supabase.from('profiles').upsert({
+      id: user.id,
+      cv_file_path: cvPath,
+      cv_file_name: file.name,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'id' })
+
+    if (profileError) {
+      await $supabase.storage.from(CV_BUCKET).remove([cvPath])
+      throw profileError
+    }
+
+    if (previousCvPath && previousCvPath !== cvPath) {
+      // The new file is already uploaded and referenced by the profile, so a
+      // cleanup failure must not make the successful replacement look failed.
+      await $supabase.storage.from(CV_BUCKET).remove([previousCvPath])
+    }
+
+    return cvPath
   }
 
   async function createResume(
@@ -120,7 +178,10 @@ export const useResumeStore = defineStore('resume', () => {
     if (!prepared) importWarnings.value = []
     const { $supabase } = useNuxtApp()
     const user = await requireUser()
-    const resolved = prepared || await prepareResumeSource(source)
+    const resolved = prepared
+      ? { status: 'ready' as const, ...prepared }
+      : await prepareResumeSource(source)
+    if (resolved.status === 'cv-required') throw new Error(resolved.warning)
     const document = resumeDocumentSchema.parse(resolved.document)
     const { data, error } = await $supabase.from('resumes').insert({
       user_id: user.id,
@@ -276,6 +337,7 @@ export const useResumeStore = defineStore('resume', () => {
     fetchResumes,
     fetchResume,
     prepareResumeSource,
+    uploadProfileCv,
     createResume,
     duplicateResume,
     renameResume,
