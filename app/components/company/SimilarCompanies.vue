@@ -163,8 +163,7 @@ const fetchSimilarCompanies = async (companyId?: string | null) => {
       shared_tags: Array.isArray(company.shared_tags) ? company.shared_tags : [],
       shared_role_terms: Array.isArray(company.shared_role_terms) ? company.shared_role_terms : []
     }))
-  } catch (error) {
-    console.error('Error fetching similar companies:', error)
+  } catch {
     similarCompanies.value = []
   } finally {
     loading.value = false

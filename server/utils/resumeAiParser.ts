@@ -390,15 +390,7 @@ async function generateGeminiResumeExtraction(
   rawText: string,
   options: ResumeAiParserOptions
 ) {
-  const startedAt = Date.now()
   const model = options.model || DEFAULT_MODEL
-  if (import.meta.dev) {
-    console.log('[resume-ai] Sending resume to Gemini', {
-      model,
-      inputCharacters: rawText.length,
-      timeoutMs: AI_TIMEOUT_MS
-    })
-  }
   const generateContent = options.generateContent || ((request) => {
     const ai = new GoogleGenAI({ apiKey: options.apiKey })
     return ai.models.generateContent(request as Parameters<typeof ai.models.generateContent>[0])
@@ -414,23 +406,12 @@ async function generateGeminiResumeExtraction(
   })
 
   const responseText = response.text?.trim()
-  if (import.meta.dev) {
-    console.log(`[resume-ai] Gemini responded in ${Date.now() - startedAt}ms`)
-    console.log('[resume-ai] Raw Gemini JSON output:\n', responseText || '<empty response>')
-  }
   if (!responseText) throw new Error('Gemini returned no resume data')
 
   const extraction = aiResumeExtractionSchema.parse(JSON.parse(responseText))
-  if (import.meta.dev) {
-    console.log('[resume-ai] Schema-validated extraction:\n', JSON.stringify(extraction, null, 2))
-  }
   validateNoInstructionLikeOutput(extraction)
   validateAiResumeGrounding(extraction, rawText)
   const document = aiExtractionToResumeDocument(extraction, options.fallbackEmail)
-  if (import.meta.dev) {
-    console.log('[resume-ai] Grounding and final schema validation passed')
-    console.log('[resume-ai] Final resume document:\n', JSON.stringify(document, null, 2))
-  }
   return document
 }
 
@@ -475,10 +456,7 @@ export async function parseResumeWithAiFallback(
       warnings: ['This CV was parsed by AI. Review all imported fields before using the resume.'],
       parser: 'gemini'
     }
-  } catch (error) {
-    if (import.meta.dev) {
-      console.error('[resume-ai] Gemini parsing failed; using legacy parser:', error)
-    }
+  } catch {
     return legacyResult(rawText, fallbackEmail, 'AI parsing failed strict validation or was unavailable.')
   }
 }

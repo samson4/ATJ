@@ -259,9 +259,7 @@ const searchJobs = async () => {
 
   const { data, error } = await query;
 
-  if (error) {
-    console.error("Error fetching jobs:", error);
-  } else {
+  if (!error) {
     jobStore.jobList = data;
   }
   loading.value = false;

@@ -165,8 +165,7 @@ const fetchJobs = async()=>{
     totalJobs.value = typeof count === 'number' ? count : (data || []).length
 
   loading.value = false
-} catch (e) {
-    console.error(e)
+} catch {
   } finally {
     loading.value = false
   }

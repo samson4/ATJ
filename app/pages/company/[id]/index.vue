@@ -178,14 +178,12 @@ const fetchCompany = async () => {
 
     company.value = data
     if (statsResponse.error) {
-      console.error('Error fetching company hiring stats:', statsResponse.error)
       buildCompanyStats()
       return
     }
 
     buildCompanyStats(statsResponse.data || [], statsResponse.count || 0)
   } catch (error: any) {
-    console.error('Error fetching company data:', error)
     company.value = null
     companyError.value = error?.message || 'Unable to load this company right now.'
   } finally {

@@ -277,9 +277,7 @@ const fetchDiscussions = async () => {
     // Transform data to include user info and newAnswer field
     discussions.value = data
     totalDiscussions.value = typeof count === 'number' ? count : (data || []).length
-  } catch (error) {
-    console.error('Error fetching discussions:', error)
-    
+  } catch {
   } finally {
     loading.value = false
   }
@@ -304,8 +302,7 @@ const submitQuestion = async () => {
     // Reset form and refresh discussions
     newQuestion.value = ''
     await fetchDiscussions()
-  } catch (error) {
-    console.error('Error submitting question:', error)
+  } catch {
   }
 }
 
@@ -328,8 +325,7 @@ const submitAnswer = async (discussionId: string, answerContent: string) => {
 
     // Reset form and refresh discussions
     await fetchDiscussions()
-  } catch (error) {
-    console.error('Error submitting answer:', error)
+  } catch {
   }
 }
 
@@ -352,8 +348,7 @@ const saveEditedQuestion = async (discussionId: string, updatedContent: string) 
     editingDiscussionId.value = null
     newQuestion.value = ''
     await fetchDiscussions()
-  } catch (error) {
-    console.error('Error deleting question:', error)
+  } catch {
   }
 }
 
@@ -376,13 +371,12 @@ const deleteQuestion = async (discussionId: string) => {
       color: 'success'
     })
     await fetchDiscussions()
-  } catch (error) {
+  } catch {
     toast.add({
       title: 'Error deleting question.',
       icon: 'i-heroicons-trash',
       color: 'error'
     })
-    console.error('Error deleting question:', error)
   }
 }
 

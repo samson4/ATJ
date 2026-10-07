@@ -123,8 +123,7 @@ export const useJobStore = defineStore('job', {
 
         this.savedJobIds = (data || []).map((item: { job_id: string }) => item.job_id)
         return this.savedJobIds
-      } catch (error) {
-        console.error('Error fetching saved jobs:', error)
+      } catch {
         this.savedJobIds = []
         return []
       } finally {
@@ -158,8 +157,7 @@ export const useJobStore = defineStore('job', {
           .filter(Boolean) as string[]
 
         return this.savedJobs
-      } catch (error) {
-        console.error('Error fetching saved jobs:', error)
+      } catch {
         this.savedJobs = []
         return []
       } finally {
@@ -301,8 +299,7 @@ export const useJobStore = defineStore('job', {
 
         this.appliedJobIds = (data || []).map((item: { job_id: string }) => item.job_id)
         return this.appliedJobIds
-      } catch (error) {
-        console.error('Error fetching applied jobs:', error)
+      } catch {
         this.appliedJobIds = []
         return []
       } finally {
@@ -336,8 +333,7 @@ export const useJobStore = defineStore('job', {
           .filter(Boolean) as string[]
 
         return this.appliedJobs
-      } catch (error) {
-        console.error('Error fetching applied jobs:', error)
+      } catch {
         this.appliedJobs = []
         return []
       } finally {
