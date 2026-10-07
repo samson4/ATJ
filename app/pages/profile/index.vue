@@ -467,7 +467,8 @@
                         color="error"
                         variant="ghost"
                         size="sm"
-                        @click="removeCv"
+                        :disabled="saving || deletingCv"
+                        @click="cvDeleteOpen = true"
                       />
                     </div>
                   </div>
@@ -568,13 +569,43 @@
                 size="lg"
                 icon="i-lucide-check"
                 class="w-full justify-center sm:w-auto"
-                :disabled="!hasChanges"
+                :disabled="!hasChanges || deletingCv"
               />
             </div>
           </UForm>
         </UCard>
       </div>
     </div>
+
+    <UModal
+      v-model:open="cvDeleteOpen"
+      title="Remove CV?"
+      description="This will permanently remove the uploaded CV from your profile."
+    >
+      <template #body>
+        <p class="text-sm text-muted">
+          You will need to upload the PDF again if you want to use it later.
+        </p>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="outline"
+            :disabled="deletingCv"
+            @click="cvDeleteOpen = false"
+          />
+          <UButton
+            label="Remove CV"
+            icon="i-lucide-trash-2"
+            color="error"
+            :loading="deletingCv"
+            @click="deleteCv"
+          />
+        </div>
+      </template>
+    </UModal>
   </UContainer>
 </template>
 
@@ -699,6 +730,8 @@ const selectedCvFile = ref<File | null>(null)
 const existingCvPath = ref('')
 const cvRemoved = ref(false)
 const openingCv = ref(false)
+const cvDeleteOpen = ref(false)
+const deletingCv = ref(false)
 const AVATAR_BUCKET = 'profile-images'
 const CV_BUCKET = 'profile-documents'
 const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -1152,14 +1185,70 @@ function onCvFileChange(event: Event) {
   state.cv_file_name = file.name
 }
 
-function removeCv() {
-  selectedCvFile.value = null
-  cvRemoved.value = !!state.cv_file_path || !!existingCvPath.value
-  state.cv_file_path = ''
-  state.cv_file_name = ''
+async function deleteCv() {
+  if (!currentUserId.value || deletingCv.value) return
 
-  if (cvInputRef.value) {
-    cvInputRef.value.value = ''
+  deletingCv.value = true
+  errorMessage.value = ''
+  const storedCvPath = existingCvPath.value || state.cv_file_path
+
+  try {
+    const { error } = await $supabase
+      .from('profiles')
+      .update({
+        cv_file_path: null,
+        cv_file_name: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', currentUserId.value)
+
+    if (error) throw error
+
+    selectedCvFile.value = null
+    cvRemoved.value = false
+    state.cv_file_path = ''
+    state.cv_file_name = ''
+    existingCvPath.value = ''
+    if (cvInputRef.value) cvInputRef.value.value = ''
+
+    const original = JSON.parse(originalState.value)
+    original.cv_file_path = ''
+    original.cv_file_name = ''
+    originalState.value = JSON.stringify(original)
+    cvDeleteOpen.value = false
+
+    if (storedCvPath) {
+      const { error: storageError } = await $supabase.storage
+        .from(CV_BUCKET)
+        .remove([storedCvPath])
+
+      if (storageError) {
+        toast.add({
+          title: 'CV removed from profile',
+          description: 'The database was updated, but the old PDF may still need storage cleanup.',
+          color: 'warning',
+          icon: 'i-lucide-info'
+        })
+        return
+      }
+    }
+
+    toast.add({
+      title: 'CV removed',
+      description: 'The uploaded CV was removed from your profile.',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+  } catch (error: any) {
+    errorMessage.value = error.message || 'Could not remove your CV.'
+    toast.add({
+      title: 'Could not remove CV',
+      description: errorMessage.value,
+      color: 'error',
+      icon: 'i-lucide-triangle-alert'
+    })
+  } finally {
+    deletingCv.value = false
   }
 }
 
