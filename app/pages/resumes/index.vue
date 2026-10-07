@@ -18,6 +18,7 @@ const cvUploadStage = ref<'idle' | 'uploading' | 'parsing'>('idle')
 const selectedCvFile = ref<File | null>(null)
 const cvUploadError = ref('')
 const selectedCvUploaded = ref(false)
+const selectedCvSourcePath = ref<string | null>(null)
 const workingId = ref('')
 const selected = ref<ResumeRow | null>(null)
 const newName = ref('Targeted Resume')
@@ -51,7 +52,11 @@ const creationOptions = [
 
 onMounted(() => store.fetchResumes())
 
-async function prepareCreationSource(source: ResumeCreationSource): Promise<boolean> {
+async function prepareCreationSource(
+  source: ResumeCreationSource,
+  file?: File,
+  sourceCvPath: string | null = null
+): Promise<boolean> {
   const activeGeneration = ++preparationGeneration
   creationPreviewLoading.value = true
   creationPreviewError.value = ''
@@ -59,7 +64,9 @@ async function prepareCreationSource(source: ResumeCreationSource): Promise<bool
   creationPreviewDocument.value = undefined
   preparedCreation.value = undefined
   try {
-    const resolved = await store.prepareResumeSource(source)
+    const resolved = file
+      ? await store.prepareResumeSourceFromFile(file, sourceCvPath)
+      : await store.prepareResumeSource(source)
     if (activeGeneration !== preparationGeneration) return false
     if (resolved.status === 'cv-required') {
       creationPreviewError.value = resolved.warning
@@ -88,6 +95,7 @@ watch([createOpen, creationSource], ([open, source]) => {
     selectedCvFile.value = null
     cvUploadError.value = ''
     selectedCvUploaded.value = false
+    selectedCvSourcePath.value = null
     cvUploadStage.value = 'idle'
     return
   }
@@ -103,12 +111,14 @@ watch([createOpen, creationSource], ([open, source]) => {
 watch(selectedCvFile, () => {
   cvUploadError.value = ''
   selectedCvUploaded.value = false
+  selectedCvSourcePath.value = null
 })
 
 function openCvUpload() {
   selectedCvFile.value = null
   cvUploadError.value = ''
   selectedCvUploaded.value = false
+  selectedCvSourcePath.value = null
   cvUploadOpen.value = true
 }
 
@@ -116,6 +126,7 @@ function cancelCvUpload() {
   selectedCvFile.value = null
   cvUploadError.value = ''
   selectedCvUploaded.value = false
+  selectedCvSourcePath.value = null
   cvUploadOpen.value = false
 }
 
@@ -136,21 +147,23 @@ async function uploadCvAndContinue() {
   try {
     if (!selectedCvUploaded.value) {
       cvUploadStage.value = 'uploading'
-      await store.uploadProfileCv(file)
+      const profileCv = await store.uploadProfileCv(file)
       selectedCvUploaded.value = true
+      selectedCvSourcePath.value = profileCv.uploaded ? profileCv.path : null
     }
     cvUploadStage.value = 'parsing'
-    const imported = await prepareCreationSource('cv')
+    const imported = await prepareCreationSource('cv', file, selectedCvSourcePath.value)
     if (!imported) {
       cvUploadOpen.value = true
-      cvUploadError.value = creationPreviewError.value || 'The CV was uploaded, but its contents could not be read.'
+      cvUploadError.value = creationPreviewError.value || 'The CV contents could not be read.'
       return
     }
 
     cvUploadOpen.value = false
     selectedCvFile.value = null
     selectedCvUploaded.value = false
-    toast.add({ title: 'CV ready', description: 'Your PDF was uploaded and its content is ready to review.', color: 'success', icon: 'i-lucide-check-circle' })
+    selectedCvSourcePath.value = null
+    toast.add({ title: 'CV ready', description: 'Your PDF content is ready to review.', color: 'success', icon: 'i-lucide-check-circle' })
   } catch (error: any) {
     cvUploadError.value = error.data?.statusMessage || error.message || 'Could not upload your CV.'
   } finally {
@@ -303,7 +316,7 @@ async function deleteDraft() {
             v-if="creationSource === 'cv' && preparedCreation?.source === 'cv' && !cvUploadOpen && !creationPreviewLoading"
             class="flex flex-col gap-3 rounded-lg border border-default p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p class="font-medium text-highlighted">Saved CV imported</p>
+              <p class="font-medium text-highlighted">CV imported</p>
               <p class="text-sm text-muted">Review the preview below or choose a different PDF.</p>
             </div>
             <UButton label="Choose a different PDF" icon="i-lucide-refresh-cw" color="neutral" variant="outline"

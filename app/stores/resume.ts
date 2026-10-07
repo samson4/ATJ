@@ -22,6 +22,13 @@ function sanitizeCvFileName(fileName: string) {
     .slice(0, 120) || 'cv.pdf'
 }
 
+function validateCvFile(file: File) {
+  if ((file.type && file.type !== CV_MIME_TYPE) || !file.name.toLowerCase().endsWith('.pdf')) {
+    throw new Error('CV must be a PDF file.')
+  }
+  if (file.size > MAX_CV_SIZE) throw new Error('CV must be 10 MB or smaller.')
+}
+
 export const useResumeStore = defineStore('resume', () => {
   const resumes = ref<ResumeRow[]>([])
   const currentResume = ref<ResumeRow | null>(null)
@@ -127,21 +134,21 @@ export const useResumeStore = defineStore('resume', () => {
   }
 
   async function uploadProfileCv(file: File) {
-    if ((file.type && file.type !== CV_MIME_TYPE) || !file.name.toLowerCase().endsWith('.pdf')) {
-      throw new Error('CV must be a PDF file.')
-    }
-    if (file.size > MAX_CV_SIZE) throw new Error('CV must be 10 MB or smaller.')
+    validateCvFile(file)
 
     const { $supabase } = useNuxtApp()
     const user = await requireUser()
     const { data: profile, error: profileLookupError } = await $supabase
       .from('profiles')
-      .select('cv_file_path')
+      .select('cv_file_path, cv_file_name')
       .eq('id', user.id)
       .maybeSingle()
     if (profileLookupError) throw profileLookupError
 
-    const previousCvPath = profile?.cv_file_path || ''
+    if (profile?.cv_file_path || profile?.cv_file_name) {
+      return { path: profile.cv_file_path || null, uploaded: false as const }
+    }
+
     const cvPath = `${user.id}/cv/${Date.now()}-${sanitizeCvFileName(file.name)}`
     const { error: uploadError } = await $supabase.storage
       .from(CV_BUCKET)
@@ -160,13 +167,27 @@ export const useResumeStore = defineStore('resume', () => {
       throw profileError
     }
 
-    if (previousCvPath && previousCvPath !== cvPath) {
-      // The new file is already uploaded and referenced by the profile, so a
-      // cleanup failure must not make the successful replacement look failed.
-      await $supabase.storage.from(CV_BUCKET).remove([previousCvPath])
-    }
+    return { path: cvPath, uploaded: true as const }
+  }
 
-    return cvPath
+  async function prepareResumeSourceFromFile(file: File, sourceCvPath: string | null = null) {
+    validateCvFile(file)
+    importWarnings.value = []
+    const token = await accessToken()
+    const body = new FormData()
+    body.append('file', file, file.name)
+    const imported = resumeImportResponseSchema.parse(await $fetch('/api/resumes/import-cv', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body
+    }))
+    if (imported.status === 'cv-required') throw new Error(imported.warning)
+    importWarnings.value = imported.warnings
+    return {
+      status: 'ready' as const,
+      document: imported.document,
+      sourceCvPath
+    }
   }
 
   async function createResume(
@@ -337,6 +358,7 @@ export const useResumeStore = defineStore('resume', () => {
     fetchResumes,
     fetchResume,
     prepareResumeSource,
+    prepareResumeSourceFromFile,
     uploadProfileCv,
     createResume,
     duplicateResume,
