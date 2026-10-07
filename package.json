@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fontsource/noto-sans-ethiopic": "^5.2.8",
+    "@google/genai": "^2.27.0",
     "@internationalized/date": "3.12.3",
     "@nuxt/content": "3.16.1",
     "@nuxt/ui": "^4.3.0",

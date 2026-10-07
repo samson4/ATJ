@@ -1,5 +1,5 @@
 import { extractText, getDocumentProxy } from 'unpdf'
-import { parseResumeText } from '../../utils/resumeParser'
+import { parseResumeWithAiFallback } from '../../utils/resumeAiParser'
 import { requireResumeUser } from '../../utils/resumeAuth'
 
 const MAX_CV_SIZE = 10 * 1024 * 1024
@@ -44,9 +44,18 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 422, statusMessage: 'This PDF has no usable selectable text. Scanned PDFs are not supported yet.' })
     }
 
+    const config = useRuntimeConfig()
+    const parsed = await parseResumeWithAiFallback(text, {
+      apiKey: config.GEMINI_API_KEY,
+      model: config.geminiModel,
+      userId: user.id,
+      fallbackEmail: user.email || ''
+    })
+
     return {
       status: 'ready' as const,
-      ...parseResumeText(text, user.email || ''),
+      document: parsed.document,
+      warnings: parsed.warnings,
       sourceCvPath: profile.cv_file_path
     }
   } catch (error: any) {

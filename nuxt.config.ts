@@ -41,6 +41,8 @@ export default defineNuxtConfig({
   plugins:["~/plugins/supabase.ts"],
   runtimeConfig: {
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
     resumeBuilderBetaEmails: process.env.NUXT_RESUME_BUILDER_BETA_EMAILS || '',
     public: {
       SUPABASE_URL: process.env.SUPABASE_URL,

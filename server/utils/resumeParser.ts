@@ -2,17 +2,19 @@ import type { ResumeDocument, ResumeSectionKey } from '~~/shared/types/resume'
 import { createEmptyResumeDocument, createResumeItemId, listToRichText, plainTextToRichText } from '~~/shared/utils/resume'
 
 const sectionAliases: Array<[RegExp, ResumeSectionKey]> = [
-  [/^(professional\s+)?summary|profile|objective|about me$/i, 'summary'],
-  [/^(work\s+)?experience|employment( history)?|work history$/i, 'experience'],
-  [/^education|academic background$/i, 'education'],
-  [/^(technical\s+)?skills|competencies|technologies$/i, 'skills'],
-  [/^projects?|selected projects$/i, 'projects'],
-  [/^certifications?|licenses( and certifications)?$/i, 'certifications'],
+  [/^(?:(?:professional\s+)?summary|profile|objective|about me)$/i, 'summary'],
+  [/^(?:(?:work\s+)?experience|employment(?: history)?|work history)$/i, 'experience'],
+  [/^(?:education|academic background)$/i, 'education'],
+  [/^(?:(?:technical\s+)?skills|competencies|technologies)$/i, 'skills'],
+  [/^(?:projects?|selected projects)$/i, 'projects'],
+  [/^(?:certifications?|licenses(?: and certifications)?)$/i, 'certifications'],
   [/^languages?$/i, 'languages'],
-  [/^links|portfolio|profiles$/i, 'links']
+  [/^(?:links|portfolio|profiles)$/i, 'links']
 ]
 
-const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
+// Bounded components avoid pathological backtracking on malformed or hostile
+// PDF text while still covering the practical maximum email lengths.
+const emailPattern = /[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]{1,253}\.[A-Z]{2,63}/i
 const phonePattern = /(?:\+?\d[\d\s().-]{7,}\d)/
 const urlPattern = /https?:\/\/[^\s]+|(?:www\.)[^\s]+/i
 const dateRangePattern = /(.{0,30}?)(?:\s+[-–—]\s+)(present|current|now|.{1,30})$/i

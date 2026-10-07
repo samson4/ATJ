@@ -20,6 +20,17 @@ yarn install
 bun install
 ```
 
+For AI-powered CV imports, configure these server-only environment variables:
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key
+# Optional; defaults to the stable Gemini Flash model used by the app.
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+CV text is sent to Gemini only from the server. Never expose `GEMINI_API_KEY`
+through Nuxt public runtime configuration or a client-side environment variable.
+
 ## Development Server
 
 Start the development server on `http://localhost:3000`:

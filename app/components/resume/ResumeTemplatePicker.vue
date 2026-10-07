@@ -4,7 +4,12 @@ import type { ResumeDocument, ResumeTemplateKey } from '~~/shared/types/resume'
 import { createResumeTemplatePreviewDocument, isResumeDocumentEmpty } from '~~/shared/utils/resume'
 
 const model = defineModel<ResumeTemplateKey>({ required: true })
-const props = defineProps<{ document?: ResumeDocument, loading?: boolean }>()
+const props = withDefaults(defineProps<{
+  document?: ResumeDocument
+  loading?: boolean
+}>(), {
+  loading: false
+})
 const usesSampleContent = computed(() => Boolean(props.document && isResumeDocumentEmpty(props.document)))
 const previewDocument = computed(() => {
   if (!props.document) return undefined
@@ -47,11 +52,20 @@ function retryFailedPreview(templateKey: ResumeTemplateKey) {
         <span
           class="flex h-full flex-col rounded-lg border border-muted bg-default p-3 transition peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary/30 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary group-hover:bg-elevated/50"
         >
-          <span class="relative mb-3 flex aspect-[210/297] items-center justify-center overflow-hidden rounded-md bg-elevated p-2">
-            <USkeleton
+          <span
+            class="relative mb-3 flex aspect-[210/297] items-center justify-center overflow-hidden rounded-md bg-elevated p-2"
+            :aria-busy="loading || (document && ['idle', 'loading'].includes(previews[template.key].status))"
+          >
+            <span
               v-if="loading || (document && ['idle', 'loading'].includes(previews[template.key].status))"
-              class="absolute inset-2"
-            />
+              class="absolute inset-2 flex items-center justify-center overflow-hidden rounded-sm"
+            >
+              <USkeleton class="absolute inset-0" />
+              <span class="relative z-10 flex max-w-[85%] flex-col items-center gap-2 rounded-md bg-default/90 px-3 py-2 text-center shadow-sm backdrop-blur-sm">
+                <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-primary" />
+                <span class="text-xs font-medium text-default">Loading preview…</span>
+              </span>
+            </span>
             <img
               v-else-if="document && previews[template.key].status === 'ready'"
               :src="previews[template.key].imageUrl"
