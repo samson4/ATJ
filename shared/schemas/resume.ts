@@ -134,7 +134,7 @@ export const resumeImportResponseSchema = z.discriminatedUnion('status', [
     status: z.literal('ready'),
     document: resumeDocumentSchema,
     warnings: z.array(z.string()),
-    sourceCvPath: z.string()
+    sourceCvPath: z.string().nullable()
   }),
   z.object({
     status: z.literal('cv-required'),

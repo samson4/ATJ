@@ -56,6 +56,9 @@ describe('resume templates', () => {
       status: 'ready', document, warnings: [], sourceCvPath: 'user/cv/resume.pdf'
     }).success).toBe(true)
     expect(resumeImportResponseSchema.safeParse({
+      status: 'ready', document, warnings: [], sourceCvPath: null
+    }).success).toBe(true)
+    expect(resumeImportResponseSchema.safeParse({
       status: 'cv-required', warning: 'Upload a PDF CV to continue.'
     }).success).toBe(true)
   })
