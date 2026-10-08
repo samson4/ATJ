@@ -1,6 +1,6 @@
 import { extractText, getDocumentProxy } from 'unpdf'
-import { parseResumeWithAiFallback } from '../../utils/resumeAiParser'
 import { requireResumeUser } from '../../utils/resumeAuth'
+import { parseResumeWithCache } from '../../utils/resumeParseCache'
 
 const MAX_CV_SIZE = 10 * 1024 * 1024
 const MAX_PAGES = 20
@@ -66,7 +66,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const config = useRuntimeConfig()
-    const parsed = await parseResumeWithAiFallback(text, {
+    const parsed = await parseResumeWithCache(text, {
+      supabase,
       apiKey: config.GEMINI_API_KEY,
       model: config.geminiModel,
       userId: user.id,

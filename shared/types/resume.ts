@@ -1,5 +1,8 @@
 export type {
   ResumeCertification,
+  ResumeAtsAssessment,
+  ResumeAtsLatestResponse,
+  ResumeAtsScoreResponse,
   ResumeDocument,
   ResumeEducation,
   ResumeExperience,

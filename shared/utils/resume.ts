@@ -189,6 +189,71 @@ export function richTextToPlainText(input: unknown) {
     .trim())
 }
 
+export function resumeDocumentToPlainText(document: ResumeDocument) {
+  const lines: string[] = []
+  const add = (...values: string[]) => lines.push(...values.map(item => item.trim()).filter(Boolean))
+
+  add('CONTACT', document.basics.fullName, document.basics.headline)
+  add([document.basics.email, document.basics.phone, document.basics.location].filter(Boolean).join(' | '))
+  const summary = richTextToPlainText(document.basics.summary)
+  if (summary) add('SUMMARY', summary)
+
+  if (document.experience.length) {
+    add('EXPERIENCE')
+    document.experience.forEach(item => add(
+      [item.title, item.company].filter(Boolean).join(' | '),
+      [item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' | '),
+      richTextToPlainText(item.bullets)
+    ))
+  }
+
+  if (document.education.length) {
+    add('EDUCATION')
+    document.education.forEach(item => add(
+      item.institution,
+      [item.degree, item.field].filter(Boolean).join(' | '),
+      [item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' | ')
+    ))
+  }
+
+  if (document.skillGroups.length) {
+    add('SKILLS')
+    document.skillGroups.forEach(group => add(
+      group.name,
+      group.items.join(', ')
+    ))
+  }
+
+  if (document.projects.length) {
+    add('PROJECTS')
+    document.projects.forEach(item => add(
+      [item.name, item.role].filter(Boolean).join(' | '),
+      [item.url, formatResumeDateRange(item.startDate, item.endDate)].filter(Boolean).join(' | '),
+      richTextToPlainText(item.bullets)
+    ))
+  }
+
+  if (document.certifications.length) {
+    add('CERTIFICATIONS')
+    document.certifications.forEach(item => add(
+      [item.name, item.issuer, item.issueDate].filter(Boolean).join(' | '),
+      item.credentialUrl
+    ))
+  }
+
+  if (document.languages.length) {
+    add('LANGUAGES')
+    document.languages.forEach(item => add([item.name, item.proficiency].filter(Boolean).join(' | ')))
+  }
+
+  if (document.links.length) {
+    add('LINKS')
+    document.links.forEach(item => add([item.label, item.url].filter(Boolean).join(' | ')))
+  }
+
+  return lines.join('\n')
+}
+
 function descriptionToRichText(description: unknown) {
   const items = value(description)
     .split(/\n+|(?<=[.!?])\s+(?=[A-Z])/)

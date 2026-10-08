@@ -1,8 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
+import { requireServerSupabase } from './serverSupabase'
 
 export async function requireResumeUser(event: H3Event) {
-  const config = useRuntimeConfig()
   const authorization = getHeader(event, 'authorization') || ''
   const token = authorization.replace(/^Bearer\s+/i, '').trim()
 
@@ -10,13 +9,7 @@ export async function requireResumeUser(event: H3Event) {
     throw createError({ statusCode: 401, statusMessage: 'Missing authorization token' })
   }
 
-  if (!config.public.SUPABASE_URL || !config.SUPABASE_SECRET_KEY) {
-    throw createError({ statusCode: 500, statusMessage: 'Supabase server configuration is missing' })
-  }
-
-  const supabase = createClient(config.public.SUPABASE_URL, config.SUPABASE_SECRET_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  })
+  const supabase = requireServerSupabase(event)
   const { data: { user }, error } = await supabase.auth.getUser(token)
 
   if (error || !user) {

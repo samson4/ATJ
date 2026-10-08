@@ -274,7 +274,8 @@ async function deleteDraft() {
         </div>
       </UCard>
       <div v-else class="grid gap-4 md:grid-cols-2">
-        <UCard v-for="resume in store.resumes" :key="resume.id">
+        <UCard  v-for="resume in store.resumes" :key="resume.id" class="border border-2 border-transparent hover:border-primary transition duration-200">
+          <NuxtLink :to="`/resumes/${resume.id}`"  class="">
           <div class="flex h-full flex-col gap-4">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -286,12 +287,12 @@ async function deleteDraft() {
             <p class="line-clamp-2 text-sm text-muted">{{ resume.content.basics.headline ||
               resume.content.basics.summary || 'Add your details and tailor this resume for a role.' }}</p>
             <div class="mt-auto flex flex-wrap gap-2 justify-end">
-              <UButton :to="`/resumes/${resume.id}`" label="Edit" icon="i-lucide-pencil" size="sm" />
               <UButton icon="i-lucide-text-cursor-input" size="sm" color="neutral" label="Rename"
-                @click="openRename(resume)" />
-              <UButton icon="i-lucide-trash-2" size="sm" color="error" label="Delete" @click="openDelete(resume)" />
+                @click.prevent="openRename(resume)" />
+              <UButton icon="i-lucide-trash-2" size="sm" color="error" label="Delete" @click.prevent="openDelete(resume)" />
             </div>
           </div>
+        </NuxtLink>
         </UCard>
       </div>
     </div>
