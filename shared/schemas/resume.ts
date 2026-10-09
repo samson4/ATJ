@@ -185,6 +185,47 @@ export const resumeAtsLatestResponseSchema = z.object({
   result: resumeAtsScoreResponseSchema.nullable()
 }).strict()
 
+const resumeJobMatchCategorySchema = z.object({
+  applicable: z.boolean(),
+  score: z.number().int().min(0).max(100),
+  feedback: text(600)
+}).strict()
+
+const resumeJobMatchStrengthSchema = z.object({
+  title: text(160),
+  detail: text(800),
+  resumeEvidence: text(500),
+  jobEvidence: text(500)
+}).strict()
+
+const resumeJobMatchImprovementSchema = z.object({
+  title: text(160),
+  detail: text(800),
+  classification: z.enum(['strict', 'preferred']),
+  resumeEvidence: text(500),
+  jobEvidence: text(500),
+  suggestedFix: text(1200).min(1)
+}).strict()
+
+export const resumeJobMatchAssessmentSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  summary: text(1000),
+  categories: z.object({
+    explicitRequirements: resumeJobMatchCategorySchema,
+    relevantExperience: resumeJobMatchCategorySchema,
+    transferableSkills: resumeJobMatchCategorySchema,
+    responsibilities: resumeJobMatchCategorySchema,
+    tailoring: resumeJobMatchCategorySchema
+  }).strict(),
+  strengths: z.array(resumeJobMatchStrengthSchema).max(5),
+  improvements: z.array(resumeJobMatchImprovementSchema).max(5),
+  assessedAt: z.string()
+}).strict()
+
+export const resumeJobMatchResponseSchema = resumeJobMatchAssessmentSchema.extend({
+  cached: z.boolean()
+}).strict()
+
 export type ResumeDocument = z.output<typeof resumeDocumentSchema>
 export type ResumeRow = z.output<typeof resumeRowSchema>
 export type ResumeSectionKey = z.output<typeof resumeSectionKeySchema>
@@ -200,3 +241,5 @@ export type ResumePreviewRequest = z.output<typeof resumePreviewRequestSchema>
 export type ResumeAtsAssessment = z.output<typeof resumeAtsAssessmentSchema>
 export type ResumeAtsScoreResponse = z.output<typeof resumeAtsScoreResponseSchema>
 export type ResumeAtsLatestResponse = z.output<typeof resumeAtsLatestResponseSchema>
+export type ResumeJobMatchAssessment = z.output<typeof resumeJobMatchAssessmentSchema>
+export type ResumeJobMatchResponse = z.output<typeof resumeJobMatchResponseSchema>

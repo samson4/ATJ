@@ -4,6 +4,9 @@ import { useJobStore } from "~/stores/job";
 import { computed, ref, watch } from 'vue';
 import type { Job } from '~/interfaces/jobInterface'
 import { isJobExpired } from '~/utils/jobDeadline'
+import { resumeJobMatchCategoryDefinitions } from '~~/shared/data/resumeJobMatch'
+import type { ResumeJobMatchResponse } from '~~/shared/types/resume'
+import { useResumeStore } from '~/stores/resume'
 
 withDefaults(defineProps<{
   fullHeight?: boolean
@@ -12,6 +15,7 @@ withDefaults(defineProps<{
 })
 
 const jobStore = useJobStore();
+const resumeStore = useResumeStore();
 const selectedJob = computed<Job>(() => jobStore.selectedJob || ({} as Job));
 const toast = useToast();
 const requestUrl = useRequestURL();
@@ -76,6 +80,24 @@ const isApplied = computed(() => jobStore.isJobApplied(selectedJob.value?.id));
 const isApplying = computed(() => jobStore.isApplyingJob(selectedJob.value?.id));
 const isExpired = computed(() => isJobExpired(selectedJob.value));
 const applicationPromptJobId = ref<string | null>(null);
+const resumeMatchOpen = ref(false);
+const resumeMatchLoading = ref(false);
+const resumeMatchError = ref('');
+const selectedResumeId = ref('');
+const resumeMatchResult = ref<ResumeJobMatchResponse>();
+const resumeMatchColor = computed(() => {
+  const score = resumeMatchResult.value?.score || 0;
+  return score >= 80 ? 'success' as const : score >= 60 ? 'warning' as const : 'error' as const;
+});
+const resumeMatchCategories = computed(() => resumeMatchResult.value
+  ? Object.entries(resumeJobMatchCategoryDefinitions)
+      .map(([key, definition]) => ({
+        key,
+        ...definition,
+        ...resumeMatchResult.value!.categories[key as keyof ResumeJobMatchResponse['categories']]
+      }))
+      .filter(category => category.applicable)
+  : []);
 const dismissedApplicationPromptJobIds = ref<string[]>([]);
 const showApplicationPrompt = computed(() => {
   const jobId = selectedJob.value?.id;
@@ -111,6 +133,19 @@ const copyJobLink = async () => {
     });
   }
 };
+const jobActionItems = computed(() => [[
+  {
+    label: 'Copy link',
+    icon: 'i-lucide-link',
+    onSelect: copyJobLink
+  },
+  {
+    label: isSaved.value ? 'Remove saved job' : 'Save job',
+    icon: isSaved.value ? 'i-lucide-bookmark-x' : 'i-lucide-bookmark',
+    disabled: isSaving.value || (isExpired.value && !isSaved.value),
+    onSelect: toggleSaved
+  }
+]]);
 const openApplyLink = (link: string) => {
   if (link.startsWith('mailto:')) {
     window.location.href = link;
@@ -155,7 +190,48 @@ const dismissApplicationPrompt = () => {
 
 watch(() => selectedJob.value?.id, () => {
   applicationPromptJobId.value = null;
+  resumeMatchOpen.value = false;
+  selectedResumeId.value = '';
+  resumeMatchResult.value = undefined;
+  resumeMatchError.value = '';
 });
+
+async function openResumeMatch() {
+  resumeMatchOpen.value = true;
+  if (resumeStore.resumes.length || resumeMatchLoading.value) return;
+  resumeMatchLoading.value = true;
+  resumeMatchError.value = '';
+  await resumeStore.fetchResumes();
+  resumeMatchLoading.value = false;
+  if (resumeStore.errorMessage) resumeMatchError.value = resumeStore.errorMessage;
+  if (resumeStore.resumes.length === 1) await selectResumeForMatch(resumeStore.resumes[0]!.id);
+}
+
+async function selectResumeForMatch(resumeId: string) {
+  selectedResumeId.value = resumeId;
+  await runResumeMatch(false);
+}
+
+async function runResumeMatch(force: boolean) {
+  if (!selectedJob.value?.id || !selectedResumeId.value) return;
+  resumeMatchLoading.value = true;
+  resumeMatchError.value = '';
+  try {
+    resumeMatchResult.value = await resumeStore.matchResumeToJob(
+      String(selectedJob.value.id), selectedResumeId.value, force
+    );
+  } catch (error: any) {
+    resumeMatchError.value = error.data?.statusMessage || error.message || 'Could not score this resume for the job.';
+  } finally {
+    resumeMatchLoading.value = false;
+  }
+}
+
+function changeMatchResume() {
+  selectedResumeId.value = '';
+  resumeMatchResult.value = undefined;
+  resumeMatchError.value = '';
+}
 </script>
 
 <template>
@@ -205,64 +281,48 @@ watch(() => selectedJob.value?.id, () => {
               </span>
             </div>
           </div>
-        </div>
-
-        <div class="grid gap-2 sm:flex sm:items-center sm:justify-end">
-          <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-            <UButton
-              v-if="selectedJob.id"
-              aria-label="Copy job link"
-              icon="i-lucide-link"
-              label="Copy link"
-              color="neutral"
-              variant="outline"
-              size="md"
-              block
-              class="justify-center sm:w-auto cursor-pointer"
-              @click="copyJobLink"
-            />
-            <UButton
-              v-if="selectedJob.id"
-              :aria-label="isSaved ? 'Remove saved job' : 'Save job'"
-              :icon="isSaved ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
-              :color="isSaved ? 'primary' : 'neutral'"
-              :variant="isSaved ? 'solid' : 'outline'"
-              :loading="isSaving"
-              :disabled="isSaving || (isExpired && !isSaved)"
-              size="md"
-              block
-              class="justify-center sm:w-auto cursor-pointer"
-              @click="toggleSaved"
-            >
-              {{ isSaved ? 'Saved' : 'Save Job' }}
-            </UButton>
+          <div class="hidden shrink-0 items-center gap-2 md:flex">
             <UButton
               v-if="applyLink && !isExpired"
-              block
               size="md"
               color="primary"
-              class="justify-center sm:w-auto cursor-pointer"
+              class="justify-center cursor-pointer"
               @click="submitApplication"
             >
               Submit Application
             </UButton>
+            <UDropdownMenu v-if="selectedJob.id" :items="jobActionItems" :content="{ align: 'end' }">
+              <UButton
+                icon="i-lucide-ellipsis-vertical"
+                color="neutral"
+                variant="outline"
+                size="md"
+                aria-label="More job actions"
+              />
+            </UDropdownMenu>
+          </div>
+        </div>
 
-            <!-- <ExpiredStamp
-              v-else-if="isExpired"
-              class="mx-auto w-28 opacity-90 sm:mx-0 sm:w-36"
-            /> -->
-
-            <!-- <UButton
-              v-else
-              block
+        <div class="space-y-2">
+          <div class="flex items-center justify-end gap-2 md:hidden">
+            <UButton
+              v-if="applyLink && !isExpired"
               size="md"
-              color="secondary"
-              variant="outline"
-              disabled
-              class="justify-center sm:w-auto"
+              color="primary"
+              class="justify-center cursor-pointer"
+              @click="submitApplication"
             >
-              No apply link
-            </UButton> -->
+              Submit Application
+            </UButton>
+            <UDropdownMenu v-if="selectedJob.id" :items="jobActionItems" :content="{ align: 'end' }">
+              <UButton
+                icon="i-lucide-ellipsis-vertical"
+                color="neutral"
+                variant="outline"
+                size="md"
+                aria-label="More job actions"
+              />
+            </UDropdownMenu>
           </div>
 
          
@@ -311,8 +371,18 @@ watch(() => selectedJob.value?.id, () => {
           </div>
         </div>
       </div>
-     </template>
-  
+    </template>
+
+    <div v-if="selectedJob.id && !isExpired" class="mb-4 flex justify-end">
+      <UButton
+        label="Resume match"
+        icon="i-lucide-file-search"
+        color="primary"
+        variant="ghost"
+        size="sm"
+        @click="openResumeMatch"
+      />
+    </div>
     
     <!-- Body: description -->
     <div class="prose dark:prose-invert max-w-none">
@@ -320,6 +390,67 @@ watch(() => selectedJob.value?.id, () => {
       <div v-if="selectedJob.job_description" v-html="marked.parse(selectedJob.job_description)"></div>
       <div v-else class="text-sm text-gray-600">No detailed description provided.</div>
     </div>
+
+    <UModal
+      v-model:open="resumeMatchOpen"
+      title="Match your resume"
+      description="See how your demonstrated experience aligns with this role."
+      :ui="{ content: 'max-w-3xl' }"
+    >
+      <template #body>
+        <div v-if="resumeMatchLoading" class="py-12 text-center">
+          <UIcon name="i-lucide-loader-circle" class="mx-auto size-8 animate-spin text-primary" />
+          <p class="mt-3 text-sm text-muted">Checking resume match…</p>
+        </div>
+        <div v-else-if="resumeMatchError && !resumeMatchResult" class="space-y-4">
+          <UAlert color="error" icon="i-lucide-triangle-alert" title="Could not check resume match" :description="resumeMatchError" />
+          <div class="flex justify-end"><UButton v-if="selectedResumeId" label="Try again" icon="i-lucide-refresh-cw" @click="runResumeMatch(false)" /></div>
+        </div>
+        <div v-else-if="resumeMatchResult" class="space-y-6">
+          <UAlert v-if="resumeMatchError" color="error" title="Could not refresh this match" :description="resumeMatchError" />
+          <div class="rounded-xl bg-elevated p-5">
+            <div class="flex items-end justify-between gap-4">
+              <div><p class="text-sm text-muted">Job match</p><p class="text-4xl font-bold text-highlighted">{{ resumeMatchResult.score }}<span class="text-lg font-medium text-muted">/100</span></p></div>
+              <UBadge :color="resumeMatchColor" variant="subtle" :label="resumeMatchResult.score >= 80 ? 'Strong match' : resumeMatchResult.score >= 60 ? 'Good potential' : 'Partial match'" />
+            </div>
+            <UProgress class="mt-4" :model-value="resumeMatchResult.score" :color="resumeMatchColor" />
+            <p class="mt-4 text-sm leading-6 text-muted">{{ resumeMatchResult.summary }}</p>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div v-for="category in resumeMatchCategories" :key="category.key" class="rounded-lg border border-default p-4">
+              <div class="flex justify-between gap-3"><p class="font-medium text-highlighted">{{ category.label }}</p><span class="text-sm font-semibold">{{ category.score }}/100</span></div>
+              <p class="mt-2 text-sm text-muted">{{ category.feedback }}</p>
+            </div>
+          </div>
+
+          <div v-if="resumeMatchResult.strengths.length">
+            <h3 class="mb-3 font-semibold text-highlighted">Strong matches</h3>
+            <div class="space-y-3"><div v-for="item in resumeMatchResult.strengths" :key="item.title" class="rounded-lg bg-success/5 p-4"><p class="font-medium text-highlighted">{{ item.title }}</p><p class="mt-1 text-sm text-muted">{{ item.detail }}</p><p class="mt-2 border-l-2 border-success pl-3 text-xs italic text-muted">“{{ item.resumeEvidence }}”</p></div></div>
+          </div>
+
+          <div v-if="resumeMatchResult.improvements.length">
+            <h3 class="mb-3 font-semibold text-highlighted">Improve your alignment</h3>
+            <div class="space-y-3"><div v-for="item in resumeMatchResult.improvements" :key="item.title" class="rounded-lg bg-warning/5 p-4"><div class="flex items-center justify-between gap-2"><p class="font-medium text-highlighted">{{ item.title }}</p><UBadge :label="item.classification === 'strict' ? 'Required' : 'Preferred'" :color="item.classification === 'strict' ? 'error' : 'neutral'" variant="subtle" /></div><p class="mt-1 text-sm text-muted">{{ item.detail }}</p><p class="mt-2 text-xs text-muted"><span class="font-medium">Job:</span> “{{ item.jobEvidence }}”</p><div class="mt-3 rounded-md bg-default p-3"><p class="text-xs font-semibold uppercase tracking-wide text-muted">Suggested fix</p><p class="mt-1 whitespace-pre-line text-sm leading-6 text-highlighted">{{ item.suggestedFix }}</p></div></div></div>
+          </div>
+
+          <p class="text-xs text-muted">This score estimates alignment from resume evidence. It does not determine whether you should apply.</p>
+        </div>
+        <div v-else-if="resumeStore.resumes.length" class="space-y-3">
+          <p class="text-sm text-muted">Choose the resume you want to compare:</p>
+          <button v-for="resume in resumeStore.resumes" :key="resume.id" type="button" class="flex w-full items-center justify-between rounded-lg border border-default p-4 text-left transition hover:border-primary hover:bg-primary/5" @click="selectResumeForMatch(resume.id)"><span><span class="block font-medium text-highlighted">{{ resume.name }}</span><span class="mt-0.5 block text-sm text-muted">{{ resume.content.basics.headline || 'Resume' }}</span></span><UIcon name="i-lucide-chevron-right" class="size-5 text-muted" /></button>
+        </div>
+        <div v-else class="py-8 text-center">
+          <UIcon name="i-lucide-file-plus-2" class="mx-auto size-9 text-muted" />
+          <p class="mt-3 font-medium text-highlighted">Create a resume first</p>
+          <p class="mt-1 text-sm text-muted">You need a saved resume to check your match.</p>
+          <UButton to="/resumes" label="Create resume" class="mt-4" />
+        </div>
+      </template>
+      <template v-if="!resumeMatchLoading" #footer>
+        <div class="flex w-full justify-end gap-2"><UButton v-if="resumeMatchResult" label="Change resume" color="neutral" variant="ghost" @click="changeMatchResume" /><UButton label="Close" color="neutral" variant="outline" @click="resumeMatchOpen = false" /><UButton v-if="resumeMatchResult" label="Rerun match" icon="i-lucide-refresh-cw" @click="runResumeMatch(true)" /></div>
+      </template>
+    </UModal>
 
     
 

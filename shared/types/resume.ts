@@ -7,6 +7,8 @@ export type {
   ResumeEducation,
   ResumeExperience,
   ResumeImportResponse,
+  ResumeJobMatchAssessment,
+  ResumeJobMatchResponse,
   ResumeLanguage,
   ResumeLink,
   ResumeProject,

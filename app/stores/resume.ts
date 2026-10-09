@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { resumeAtsLatestResponseSchema, resumeAtsScoreResponseSchema, resumeDocumentSchema, resumeImportResponseSchema, resumeRowSchema } from '~~/shared/schemas/resume'
+import { resumeAtsLatestResponseSchema, resumeAtsScoreResponseSchema, resumeDocumentSchema, resumeImportResponseSchema, resumeJobMatchResponseSchema, resumeRowSchema } from '~~/shared/schemas/resume'
 import type {
   CandidateProfile,
   ResumeCreationSource,
@@ -356,6 +356,15 @@ export const useResumeStore = defineStore('resume', () => {
     }))
   }
 
+  async function matchResumeToJob(jobId: string, resumeId: string, force = false) {
+    const token = await accessToken()
+    return resumeJobMatchResponseSchema.parse(await $fetch(`/api/jobs/${jobId}/resume-match`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: { resumeId, force }
+    }))
+  }
+
   function clearCurrent() {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = null
@@ -384,6 +393,7 @@ export const useResumeStore = defineStore('resume', () => {
     flushSave,
     fetchLatestAtsScore,
     assessResume,
+    matchResumeToJob,
     downloadResume,
     clearCurrent
   }
