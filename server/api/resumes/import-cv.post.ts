@@ -1,12 +1,12 @@
 import { extractText, getDocumentProxy } from 'unpdf'
-import { requireResumeUser } from '../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../utils/resumeAuth'
 import { parseResumeWithCache } from '../../utils/resumeParseCache'
 
 const MAX_CV_SIZE = 10 * 1024 * 1024
 const MAX_PAGES = 20
 
 export default defineEventHandler(async (event) => {
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
   const contentType = getHeader(event, 'content-type') || ''
   let bytes: Uint8Array
   let sourceCvPath: string | null = null

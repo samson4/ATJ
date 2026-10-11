@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { resumeDocumentSchema, resumeJobMatchAssessmentSchema } from '~~/shared/schemas/resume'
 import { isResumeDocumentEmpty } from '~~/shared/utils/resume'
-import { requireResumeUser } from '../../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../../utils/resumeAuth'
 import { RESUME_JOB_MATCH_SCORER_VERSION, scoreResumeForJob } from '../../../utils/resumeJobMatchScorer'
 
 const requestSchema = z.object({ resumeId: z.uuid(), force: z.boolean().optional() }).strict()
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
   if (!jobId) throw createError({ statusCode: 400, statusMessage: 'Missing job ID' })
   const request = requestSchema.safeParse(await readBody(event))
   if (!request.success) throw createError({ statusCode: 400, statusMessage: 'Invalid resume match request' })
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
 
   const [{ data: resume, error: resumeError }, { data: job, error: jobError }] = await Promise.all([
     supabase.from('resumes').select('content').eq('id', request.data.resumeId).eq('user_id', user.id).maybeSingle(),

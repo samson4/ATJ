@@ -7,7 +7,7 @@ import {
   RESUME_ATS_SCORER_VERSION,
   scoreResumeWithAi
 } from '../../../utils/resumeAtsScorer'
-import { requireResumeUser } from '../../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../../utils/resumeAuth'
 
 const pendingAssessments = new Map<string, Promise<unknown>>()
 
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const resumeId = getRouterParam(event, 'id')
   if (!resumeId) throw createError({ statusCode: 400, statusMessage: 'Missing resume ID' })
 
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
   const { data, error } = await supabase
     .from('resumes')
     .select('content')

@@ -2,10 +2,10 @@ import { resumeDocumentSchema } from '~~/shared/schemas/resume'
 import { resumeTemplateKeySchema } from '~~/shared/data/resumeTemplates'
 import { sanitizeDownloadName } from '~~/shared/utils/resume'
 import { renderResumePdf } from '../../../utils/resumePdf'
-import { requireResumeUser } from '../../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../../utils/resumeAuth'
 
 export default defineEventHandler(async (event) => {
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
   const resumeId = getRouterParam(event, 'id')
   if (!resumeId) throw createError({ statusCode: 400, statusMessage: 'Missing resume ID' })
 

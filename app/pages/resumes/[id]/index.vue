@@ -5,7 +5,7 @@ import { resumeTemplateByKey } from '~~/shared/data/resumeTemplates'
 import type { ResumeAtsScoreResponse, ResumeDocument, ResumeTemplateKey } from '~~/shared/types/resume'
 import { useResumeStore } from '~/stores/resume'
 
-definePageMeta({ layout: 'resume', middleware: 'auth' })
+definePageMeta({ layout: 'resume', middleware: ['auth', 'resume-beta'] })
 useSeoMeta({ title: 'Edit Resume | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const route = useRoute()

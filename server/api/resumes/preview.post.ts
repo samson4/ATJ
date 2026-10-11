@@ -1,9 +1,9 @@
 import { resumePreviewRequestSchema } from '~~/shared/schemas/resume'
-import { requireResumeUser } from '../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../utils/resumeAuth'
 import { renderResumePdf } from '../../utils/resumePdf'
 
 export default defineEventHandler(async (event) => {
-  await requireResumeUser(event)
+  await requireResumeBetaUser(event)
   const parsed = resumePreviewRequestSchema.safeParse(await readBody(event))
   if (!parsed.success) {
     throw createError({ statusCode: 422, statusMessage: 'The resume contains invalid data and cannot be previewed' })

@@ -13,6 +13,7 @@ export default defineNuxtConfig({
       '/companies',
       '/about',
       '/contact',
+      '/resume-builder',
       '/privacy',
       '/terms'
     ],

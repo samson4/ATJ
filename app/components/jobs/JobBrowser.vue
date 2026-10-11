@@ -29,9 +29,15 @@ const dateRange = useState<StoredDateRange>('job-browser-date-range', () => ({})
 const selectedWorkplace = useState<any[]>('job-browser-workplace', () => [])
 const selectedType = useState<any[]>('job-browser-type', () => [])
 const selectedTag = useState<any[]>('job-browser-tags', () => [])
-const heroLinks = computed(() => page.value?.links?.filter(
-  link => link.to !== '/resumes' || resumeBuilderEnabled.value
-) ?? [])
+const heroLinks = computed(() => page.value?.links?.map(link => {
+  if (link.to !== '/resumes' || resumeBuilderEnabled.value) return link
+
+  return {
+    ...link,
+    label: 'Join the Resume Builder waitlist',
+    to: '/resume-builder'
+  }
+}) ?? [])
 // --- Options Configuration ---
 const workplaceOptions = [
   { label: 'Remote', value: 'Remote' },

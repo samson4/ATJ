@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto'
 import { resumeAtsAssessmentSchema, resumeDocumentSchema } from '~~/shared/schemas/resume'
 import { RESUME_ATS_SCORER_VERSION } from '../../../utils/resumeAtsScorer'
-import { requireResumeUser } from '../../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../../utils/resumeAuth'
 
 export default defineEventHandler(async (event) => {
   const resumeId = getRouterParam(event, 'id')
   if (!resumeId) throw createError({ statusCode: 400, statusMessage: 'Missing resume ID' })
 
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
   const { data: resume, error: resumeError } = await supabase
     .from('resumes')
     .select('content')
