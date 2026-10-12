@@ -1,14 +1,14 @@
 import { extractText, getDocumentProxy } from 'unpdf'
 import { parseResumeText } from '../../utils/resumeParser'
 import { getBillingStatus, resumeBillingEnabled } from '../../utils/billing'
-import { requireResumeUser } from '../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../utils/resumeAuth'
 import { parseResumeWithCache } from '../../utils/resumeParseCache'
 
 const MAX_CV_SIZE = 10 * 1024 * 1024
 const MAX_PAGES = 20
 
 export default defineEventHandler(async (event) => {
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
   const billingStatus = await getBillingStatus(supabase, user.id, resumeBillingEnabled(event))
   if (!billingStatus.canCreateResume) {
     throw createError({ statusCode: 409, statusMessage: 'You have reached your resume limit', data: { code: 'RESUME_LIMIT_REACHED' } })

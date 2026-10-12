@@ -1,14 +1,31 @@
 <script setup lang="ts">
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
 import { billingProductsResponseSchema } from '~~/shared/schemas/billing'
 
 definePageMeta({ layout: 'default' })
 
 useSeoMeta({
-  title: 'Resume Builder | Addis Tech Jobs',
-  description: 'Create tailored, ATS-friendly resumes with flexible Free and Premium plans.'
+  title: 'Resume Builder Waitlist | Addis Tech Jobs',
+  description: 'Join the Addis Tech Jobs Resume Builder waitlist and be among the first to create tailored, ATS-friendly resumes.'
 })
 
-const steps = [
+const { $supabase } = useNuxtApp()
+const schema = z.object({
+  email: z.email('Enter a valid email address')
+})
+
+type Schema = z.output<typeof schema>
+
+const form = reactive<Schema>({ email: '' })
+const submitting = ref(false)
+const joined = ref(false)
+const alreadyJoined = ref(false)
+const errorMessage = ref('')
+const resumeBuilderEnabled = ref(false)
+const checkingAccess = ref(true)
+
+const steps = computed(() => [
   {
     number: '01',
     title: 'Bring your experience in',
@@ -24,10 +41,12 @@ const steps = [
   {
     number: '03',
     title: 'Review, refine, apply',
-    description: 'Check your structure, job match, and ATS feedback before exporting a polished PDF.',
+    description: resumeBuilderEnabled.value
+      ? 'Check your structure, job match, and ATS feedback before exporting a polished PDF.'
+      : 'Review the structure and details before exporting a polished PDF.',
     icon: 'i-lucide-badge-check'
   }
-]
+])
 
 const freePlanFeatures = [
   'Create and save up to 5 resumes',
@@ -43,6 +62,49 @@ const { data: productCatalog, status: productCatalogStatus } = await useFetch('/
 
 const billingProducts = computed(() => productCatalog.value?.products || [])
 
+onMounted(async () => {
+  const { data: { session } } = await $supabase.auth.getSession()
+  if (!session) {
+    checkingAccess.value = false
+    return
+  }
+
+  form.email = session.user.email || ''
+
+  try {
+    const headers = { Authorization: `Bearer ${session.access_token}` }
+    const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', { headers })
+    resumeBuilderEnabled.value = access.enabled
+
+    if (!access.enabled) {
+      const waitlistStatus = await $fetch<{ joined: boolean }>('/api/resume-builder/waitlist', { headers })
+      alreadyJoined.value = waitlistStatus.joined
+    }
+  } catch {
+    resumeBuilderEnabled.value = false
+  } finally {
+    checkingAccess.value = false
+  }
+})
+
+async function joinWaitlist(event: FormSubmitEvent<Schema>) {
+  submitting.value = true
+  errorMessage.value = ''
+
+  try {
+    const result = await $fetch<{ joined: boolean; alreadyJoined: boolean }>('/api/resume-builder/waitlist', {
+      method: 'POST',
+      body: event.data
+    })
+
+    joined.value = result.joined
+    alreadyJoined.value = result.alreadyJoined
+  } catch (error: any) {
+    errorMessage.value = error.data?.statusMessage || 'We could not add you right now. Please try again.'
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -58,7 +120,7 @@ const billingProducts = computed(() => productCatalog.value?.products || [])
               <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-50" />
               <span class="relative inline-flex size-2 rounded-full bg-primary" />
             </span>
-            Free plan available · Premium when you need more
+            {{ resumeBuilderEnabled ? 'Your private beta access is ready' : 'Private beta · Waitlist now open' }}
           </div>
 
           <h1 class="mx-auto mt-7 max-w-4xl text-balance text-5xl font-bold tracking-[-0.045em] text-highlighted sm:text-6xl lg:text-7xl">
@@ -75,19 +137,71 @@ const billingProducts = computed(() => productCatalog.value?.products || [])
             Build clear, role-specific resumes from the experience you already have—with smart guidance built for tech job seekers.
           </p>
 
-          <div class="mx-auto mt-9 max-w-2xl">
-            <div class="rounded-2xl border border-success/30 bg-default p-3 shadow-xl shadow-success/5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+          <div id="waitlist" class="mx-auto mt-9 max-w-2xl scroll-mt-24">
+            <USkeleton v-if="checkingAccess" class="h-[76px] rounded-2xl" />
+
+            <div v-else-if="resumeBuilderEnabled" class="rounded-2xl border border-success/30 bg-default p-3 shadow-xl shadow-success/5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
               <div class="flex items-center gap-3 text-left">
                 <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-success/10">
                   <UIcon name="i-lucide-circle-check" class="size-5 text-success" />
                 </span>
                 <div>
-                  <p class="font-semibold text-highlighted">Resume Builder is ready</p>
-                  <p class="text-sm text-muted">Start free with five resumes and three AI credits.</p>
+                  <p class="font-semibold text-highlighted">Your beta access is ready</p>
+                  <p class="text-sm text-muted">Start building your next resume.</p>
                 </div>
               </div>
               <UButton to="/resumes" label="Open builder" icon="i-lucide-arrow-right" trailing class="mt-3 sm:mt-0" />
             </div>
+
+            <div v-else-if="joined || alreadyJoined" class="rounded-2xl border border-success/30 bg-default p-5 shadow-xl shadow-success/5" role="status">
+              <div class="flex items-center justify-center gap-3">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-success/10">
+                  <UIcon name="i-lucide-mail-check" class="size-5 text-success" />
+                </span>
+                <div class="text-left">
+                  <p class="font-semibold text-highlighted">{{ alreadyJoined ? 'You’re already on the list' : 'You’re on the waitlist' }}</p>
+                  <p class="text-sm text-muted">We’ll contact {{ form.email }} when access is ready.</p>
+                </div>
+              </div>
+            </div>
+
+            <UForm v-else :schema="schema" :state="form" class="space-y-3" @submit="joinWaitlist">
+              <div class="rounded-2xl border border-default bg-default p-2 shadow-xl shadow-primary/5 sm:flex sm:items-start sm:gap-2">
+                <UFormField name="email" class="flex-1" :ui="{ error: 'text-left' }">
+                  <UInput
+                    v-model="form.email"
+                    type="email"
+                    autocomplete="email"
+                    aria-label="Email address"
+                    placeholder="Enter your email address"
+                    icon="i-lucide-mail"
+                    size="xl"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UButton
+                  type="submit"
+                  label="Join the waitlist"
+                  icon="i-lucide-arrow-right"
+                  trailing
+                  size="xl"
+                  class="mt-2 w-full justify-center sm:mt-0 sm:w-auto"
+                  :loading="submitting"
+                />
+              </div>
+              <UAlert
+                v-if="errorMessage"
+                color="error"
+                variant="subtle"
+                icon="i-lucide-triangle-alert"
+                title="Could not join the waitlist"
+                :description="errorMessage"
+              />
+            </UForm>
+
+            <p v-if="!checkingAccess && !resumeBuilderEnabled && !joined && !alreadyJoined" class="mt-3 text-xs text-dimmed">
+              No spam—only beta access and product updates.
+            </p>
           </div>
         </div>
 
@@ -229,7 +343,7 @@ const billingProducts = computed(() => productCatalog.value?.products || [])
       </UContainer>
     </section>
 
-    <section class="relative overflow-hidden border-y border-muted bg-muted/30 py-20 sm:py-28">
+    <section v-if="resumeBuilderEnabled" class="relative overflow-hidden border-y border-muted bg-muted/30 py-20 sm:py-28">
       <div class="absolute left-1/2 top-0 -z-10 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
       <UContainer>
         <div class="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-end">
@@ -321,10 +435,17 @@ const billingProducts = computed(() => productCatalog.value?.products || [])
           <div class="absolute -left-20 -top-24 size-64 rounded-full bg-primary/20 blur-3xl" />
           <div class="absolute -bottom-32 -right-16 size-72 rounded-full bg-primary/15 blur-3xl" />
           <div class="relative mx-auto max-w-2xl">
-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Start free</p>
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{{ resumeBuilderEnabled ? 'Start free' : 'Private beta' }}</p>
             <h2 class="mt-4 text-3xl font-bold tracking-tight text-inverted sm:text-4xl">Build a stronger resume for your next opportunity.</h2>
-            <p class="mt-4 leading-7 text-inverted/70">Create up to five resumes for free and upgrade only when you need more capacity or AI credits.</p>
-            <UButton to="/resumes" label="Open Resume Builder" icon="i-lucide-arrow-up-right" trailing size="lg" class="mt-7" />
+            <p class="mt-4 leading-7 text-inverted/70">{{ resumeBuilderEnabled ? 'Create up to five resumes for free and upgrade only when you need more capacity or AI credits.' : 'Join the waitlist and we’ll let you know when your access is ready.' }}</p>
+            <UButton
+              :to="resumeBuilderEnabled ? '/resumes' : '#waitlist'"
+              :label="resumeBuilderEnabled ? 'Open Resume Builder' : 'Join the waitlist'"
+              icon="i-lucide-arrow-up-right"
+              trailing
+              size="lg"
+              class="mt-7"
+            />
           </div>
         </div>
       </UContainer>

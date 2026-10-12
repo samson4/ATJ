@@ -6,7 +6,7 @@ import type { ResumeAtsScoreResponse, ResumeDocument, ResumeTemplateKey } from '
 import { useResumeStore } from '~/stores/resume'
 import { useBillingStore } from '~/stores/billing'
 
-definePageMeta({ layout: 'resume', middleware: ['auth'] })
+definePageMeta({ layout: 'resume', middleware: ['auth', 'resume-beta'] })
 useSeoMeta({ title: 'Edit Resume | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const route = useRoute()

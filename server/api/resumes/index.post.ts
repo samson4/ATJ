@@ -1,8 +1,8 @@
 import { resumeCreateRequestSchema, resumeRowSchema } from '~~/shared/schemas/resume'
-import { requireResumeUser } from '../../utils/resumeAuth'
+import { requireResumeBetaUser } from '../../utils/resumeAuth'
 
 export default defineEventHandler(async (event) => {
-  const { supabase, user } = await requireResumeUser(event)
+  const { supabase, user } = await requireResumeBetaUser(event)
   const request = resumeCreateRequestSchema.safeParse(await readBody(event))
   if (!request.success) throw createError({ statusCode: 422, statusMessage: 'Invalid resume data' })
   if (request.data.source_cv_path && !request.data.source_cv_path.startsWith(`${user.id}/`)) {

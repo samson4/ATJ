@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useBillingStore } from '~/stores/billing'
 
-definePageMeta({ layout: 'default', middleware: ['auth'] })
+definePageMeta({ layout: 'default', middleware: ['auth', 'resume-beta'] })
 useSeoMeta({ title: 'Billing | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const billing = useBillingStore()

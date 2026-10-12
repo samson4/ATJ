@@ -4,7 +4,7 @@ import { resumeTemplateByKey } from '~~/shared/data/resumeTemplates'
 import { useResumeStore } from '~/stores/resume'
 import { useBillingStore } from '~/stores/billing'
 
-definePageMeta({ layout: 'default', middleware: ['auth'] })
+definePageMeta({ layout: 'default', middleware: ['auth', 'resume-beta'] })
 useSeoMeta({ title: 'Resume Builder | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const store = useResumeStore()

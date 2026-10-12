@@ -5,6 +5,7 @@ import { getLocalTimeZone, parseDate, type DateValue } from '@internationalized/
 import type { DateRange } from 'reka-ui'
 import { useJobStore } from "~/stores/job"
 
+const { $supabase } = useNuxtApp()
 const jobStore = useJobStore()
 const route = useRoute()
 
@@ -17,6 +18,7 @@ const { data: page } = await useAsyncData('index', () => {
 const searchQuery = useState<string>('job-browser-search-query', () => '')
 const loading = ref(false)
 const dateFilterOpen = ref(false)
+const resumeBuilderEnabled = ref(false)
 
 // --- Filter Selections ---
 type StoredDateRange = {
@@ -27,7 +29,15 @@ const dateRange = useState<StoredDateRange>('job-browser-date-range', () => ({})
 const selectedWorkplace = useState<any[]>('job-browser-workplace', () => [])
 const selectedType = useState<any[]>('job-browser-type', () => [])
 const selectedTag = useState<any[]>('job-browser-tags', () => [])
-const heroLinks = computed(() => page.value?.links ?? [])
+const heroLinks = computed(() => page.value?.links?.map(link => {
+  if (link.to !== '/resumes' || resumeBuilderEnabled.value) return link
+
+  return {
+    ...link,
+    label: 'Join the Resume Builder waitlist',
+    to: '/resume-builder'
+  }
+}) ?? [])
 // --- Options Configuration ---
 const workplaceOptions = [
   { label: 'Remote', value: 'Remote' },
@@ -180,6 +190,17 @@ onMounted(async () => {
   mobileMediaQuery.addEventListener('change', syncMobileView)
   restoreScrollPosition()
 
+  const { data: { session } } = await $supabase.auth.getSession()
+  if (!session?.access_token) return
+
+  try {
+    const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    })
+    resumeBuilderEnabled.value = access.enabled
+  } catch {
+    resumeBuilderEnabled.value = false
+  }
 })
 
 onBeforeUnmount(() => {

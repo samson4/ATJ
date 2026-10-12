@@ -85,6 +85,7 @@ const isExpired = computed(() => isJobExpired(selectedJob.value));
 const applicationPromptJobId = ref<string | null>(null);
 const resumeMatchOpen = ref(false);
 const resumeMatchAuthenticated = ref(false);
+const resumeBuilderEnabled = ref(false);
 const resumeMatchLoading = ref(false);
 const resumeMatchError = ref('');
 const selectedResumeId = ref('');
@@ -115,6 +116,16 @@ const showApplicationPrompt = computed(() => {
 onMounted(async () => {
   const { data: { session } } = await $supabase.auth.getSession();
   resumeMatchAuthenticated.value = Boolean(session?.access_token);
+  if (!session?.access_token) return;
+
+  try {
+    const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    resumeBuilderEnabled.value = access.enabled;
+  } catch {
+    resumeBuilderEnabled.value = false;
+  }
 });
 
 const toggleSaved = async () => {
@@ -389,7 +400,7 @@ function changeMatchResume() {
       </div>
     </template>
 
-    <div v-if="selectedJob.id && !isExpired && resumeMatchAuthenticated" class="mb-4 flex justify-end">
+    <div v-if="selectedJob.id && !isExpired && resumeMatchAuthenticated && resumeBuilderEnabled" class="mb-4 flex justify-end">
       <UButton
         label="Resume match"
         icon="i-lucide-file-search"

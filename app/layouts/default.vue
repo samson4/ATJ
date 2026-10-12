@@ -13,11 +13,11 @@
     <template #right>
       <NuxtLink
         v-if="authUser"
-        to="/resumes"
+        :to="resumeBuilderEnabled ? '/resumes' : '/resume-builder'"
         class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-base font-medium text-toned transition-colors hover:bg-primary hover:text-inverted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:hidden"
         active-class="bg-primary/10 text-primary"
       >
-        <span>Resume Builder</span>
+        <span>{{ resumeBuilderEnabled ? 'Resume Builder' : 'Join waitlist' }}</span>
       </NuxtLink>
       <div v-if="authUser">
         <!-- <UButton v-if="authUser" to="/" color="error"  variant="outline">Sign Out</UButton> -->
@@ -63,10 +63,13 @@ const router = useRouter();
 const authStore = useAuthStore()
 const jobStore = useJobStore()
 const authUser = ref<User | null>(null);
-const items = ref([
+const resumeBuilderEnabled = ref(false)
+const items = computed(() => [
   { label: "Profile", icon: "lucide:user", to: "/profile" },
   { label: "Saved Jobs", icon: "i-lucide-bookmark", to: "/saved-jobs" },
-  { label: "Plan & Billing", icon: "i-lucide-credit-card", to: "/billing" },
+  ...(resumeBuilderEnabled.value
+    ? [{ label: "Plan & Billing", icon: "i-lucide-credit-card", to: "/billing" }]
+    : []),
   {
     label: "Sign Out",
     icon: "lucide:log-out",
@@ -87,6 +90,17 @@ onMounted(async () => {
     jobStore.fetchSavedJobIds()
     jobStore.fetchAppliedJobIds()
 
+    const { data: { session } } = await $supabase.auth.getSession()
+    if (session?.access_token) {
+      try {
+        const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        resumeBuilderEnabled.value = access.enabled
+      } catch {
+        resumeBuilderEnabled.value = false
+      }
+    }
   }
 });
 
@@ -96,6 +110,7 @@ const signOut = async () => {
   let { error } = await $supabase.auth.signOut();
   authStore.user = {}
   authUser.value = null
+  resumeBuilderEnabled.value = false
   jobStore.clearSavedJobs()
   jobStore.clearAppliedJobs()
   if (error) throw error;

@@ -56,6 +56,7 @@ export default defineNuxtConfig({
     chapaMode: process.env.CHAPA_MODE || 'test',
     appBaseUrl,
     resumeBillingEnabled: process.env.RESUME_BILLING_ENABLED || 'false',
+    resumeBuilderBetaEmails: process.env.NUXT_RESUME_BUILDER_BETA_EMAILS || '',
     geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
     public: {
       SUPABASE_URL: process.env.SUPABASE_URL,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { billingOrderSchema } from '~~/shared/schemas/billing'
 
-definePageMeta({ layout: 'default', middleware: ['auth'] })
+definePageMeta({ layout: 'default', middleware: ['auth', 'resume-beta'] })
 useSeoMeta({ title: 'Payment status | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const route = useRoute()
