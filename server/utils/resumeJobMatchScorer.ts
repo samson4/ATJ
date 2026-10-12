@@ -142,8 +142,15 @@ export async function scoreResumeForJob(
   jobText: string,
   options: ResumeJobMatchOptions
 ): Promise<ResumeJobMatchAssessment> {
+  return scoreResumeTextForJob(resumeDocumentToPlainText(document), jobText, options)
+}
+
+export async function scoreResumeTextForJob(
+  resumeText: string,
+  jobText: string,
+  options: ResumeJobMatchOptions
+): Promise<ResumeJobMatchAssessment> {
   if (!options.apiKey && !options.generateContent) throw new Error('Job matching is not configured')
-  const resumeText = resumeDocumentToPlainText(document)
   if (resumeText.length + jobText.length > MAX_COMBINED_INPUT) throw new Error('Job match input is too large')
   const now = options.now ?? Date.now()
   if (!consumeAttempt(options.userId, now)) throw new Error('Job matching limit reached')

@@ -124,6 +124,10 @@ export const resumeSaveRequestSchema = z.object({
   content: resumeDocumentSchema
 })
 
+export const resumeCreateRequestSchema = resumeSaveRequestSchema.extend({
+  source_cv_path: z.string().max(500).nullable()
+}).strict()
+
 export const resumePreviewRequestSchema = z.object({
   document: resumeDocumentSchema,
   templateKey: resumeTemplateKeySchema

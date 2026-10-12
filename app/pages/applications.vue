@@ -85,6 +85,16 @@
               </UButton>
             </div>
           </div>
+
+          <template v-if="jobStore.appliedJobsTotal > 0" #footer>
+            <div class="flex justify-center">
+              <UPagination
+                v-model:page="page"
+                :items-per-page="itemsPerPage"
+                :total="jobStore.appliedJobsTotal"
+              />
+            </div>
+          </template>
         </UCard>
       </div>
     </div>
@@ -130,6 +140,7 @@
 
 <script setup lang="ts">
 import { useJobStore } from "~/stores/job";
+import DisplayConfirmation from '~/components/display/Confirmation.vue'
 
 definePageMeta({ layout: "default", middleware: "auth" });
 useSeoMeta({
@@ -137,8 +148,11 @@ useSeoMeta({
 })
 
 const jobStore = useJobStore()
+const overlay = useOverlay()
 const detailOpen = ref(false)
 const selectedJob = computed(() => jobStore.selectedJob)
+const page = ref(1)
+const itemsPerPage = 10
 const isMobile = ref(false)
 let mobileMediaQuery: MediaQueryList | null = null
 
@@ -151,7 +165,10 @@ onMounted(async () => {
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   syncMobileView()
   mobileMediaQuery.addEventListener('change', syncMobileView)
-  await jobStore.fetchAppliedJobs()
+  await Promise.all([
+    jobStore.fetchAppliedJobIds(),
+    jobStore.fetchAppliedJobs(page.value, itemsPerPage)
+  ])
 })
 
 onBeforeUnmount(() => {
@@ -171,6 +188,11 @@ watch(() => jobStore.appliedJobs.length, () => {
   if (!selectedStillApplied) closeDetail()
 })
 
+watch(page, async () => {
+  closeDetail()
+  await jobStore.fetchAppliedJobs(page.value, itemsPerPage)
+})
+
 const formatAppliedDate = (date?: string | null) => {
   if (!date) return 'recently'
 
@@ -185,8 +207,29 @@ const formatAppliedDate = (date?: string | null) => {
   }
 };
 
-const removeApplication = async (jobId?: string) => {
-  await jobStore.removeAppliedJob(jobId)
+const removeApplication = (jobId?: string) => {
+  if (!jobId) return
+
+  const modal = overlay.create(DisplayConfirmation)
+  modal.open({
+    title: 'Remove tracked application?',
+    message: 'This application will be removed from your tracked applications.',
+    onConfirm: async () => {
+      const previousTotal = jobStore.appliedJobsTotal
+      await jobStore.removeAppliedJob(jobId)
+      modal.close()
+
+
+      if (jobStore.appliedJobsTotal === previousTotal) return
+
+      const lastPage = Math.max(1, Math.ceil(jobStore.appliedJobsTotal / itemsPerPage))
+      if (page.value > lastPage) {
+        page.value = lastPage
+      } else {
+        await jobStore.fetchAppliedJobs(page.value, itemsPerPage)
+      }
+    }
+  })
 };
 
 const openApplication = (application: any) => {

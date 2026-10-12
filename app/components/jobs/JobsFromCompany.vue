@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { marked } from 'marked';
 import type { Job } from '~/interfaces/jobInterface'
 import { isJobExpired } from '~/utils/jobDeadline'
+import DisplayConfirmation from '~/components/display/Confirmation.vue'
 
 const props = defineProps({
   job: {
@@ -34,6 +35,7 @@ const totalJobs = ref(0)
 import { useJobStore } from "~/stores/job"
 
 const jobStore = useJobStore()
+const overlay = useOverlay()
 
 const selectJob = (job: Job) => {
   const current = jobStore.selectedJob
@@ -63,7 +65,20 @@ const isExpired = (job: Job) => {
 }
 
 const toggleSaved = async (job: Job) => {
-  await jobStore.toggleSavedJob(job)
+  if (!job.id || !isSaved(job.id)) {
+    await jobStore.saveJob(job)
+    return
+  }
+
+  const modal = overlay.create(DisplayConfirmation)
+  modal.open({
+    title: 'Remove saved job?',
+    message: 'This job will be removed from your saved jobs.',
+    onConfirm: async () => {
+      await jobStore.unsaveJob(job.id)
+      modal.close()
+    }
+  })
 }
 
 

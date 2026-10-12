@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'landing' })
 
-const effectiveDate = 'August 31, 2026'
+const effectiveDate = 'October 11, 2026'
 const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 useSeoMeta({
@@ -55,7 +55,8 @@ useSeoMeta({
         <p>
           You are responsible for the accuracy of information you add to your
           account or profile, including your name, bio, skills, experience,
-          education, links, profile photo, and CV or resume. You are also
+          education, links, and profile photo, as well as resumes you create or
+          import in the Resume Builder. You are also
           responsible for keeping your login credentials secure.
         </p>
         <p>
@@ -97,12 +98,48 @@ useSeoMeta({
       </section>
 
       <section class="space-y-3">
+        <h2 class="text-2xl font-semibold text-highlighted">Resume Builder, AI Features, and Credits</h2>
+        <p>
+          Resume parsing, ATS readiness scores, job-match scores, and suggested improvements are automated,
+          advisory tools. They may be incomplete or inaccurate and do not guarantee that an employer, recruiter,
+          or applicant tracking system will accept, rank, or respond to your application.
+        </p>
+        <p>
+          Importing a PDF resume does not use an AI credit. One credit is used only after a fresh ATS readiness score
+          or job-match score completes successfully and its validated result is saved. Provider failures, validation
+          failures, and eligible saved or cached results do not use another credit.
+        </p>
+        <p>
+          Free accounts may save up to five resumes and receive three lifetime AI credits once per account. Premium
+          provides capacity for up to 25 saved resumes and 20 included AI credits during a 30-day term. Premium access
+          renews only when you make another payment and does not renew automatically. Included Premium credits expire
+          with their term and do not roll over. Purchased credit packs do not expire.
+        </p>
+        <p>
+          If Premium expires while you have more than five resumes, you may continue to view, edit, export, rename, or
+          delete existing resumes. You cannot create or duplicate another resume until you renew Premium or reduce your
+          saved resume count below the Free-plan limit.
+        </p>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-2xl font-semibold text-highlighted">Payments and Refunds</h2>
+        <p>
+          Payments are processed by Chapa under its own terms. Prices are shown in Ethiopian birr before checkout.
+          Current products are a 30-day Premium pass for 299 ETB, five AI credits for 99 ETB, and fifteen AI credits
+          for 249 ETB. The price and benefits displayed at checkout apply to that order. Except where required by law,
+          completed purchases are not refundable after their credits or Premium benefits have been used. Duplicate or
+          erroneous charges should be reported promptly for review.
+        </p>
+      </section>
+
+      <section class="space-y-3">
         <h2 class="text-2xl font-semibold text-highlighted">
           User Content
         </h2>
         <p>
           You retain ownership of content you provide, such as profile details,
-          portfolio links, CVs, photos, and comments or discussions. You give Addis
+          portfolio links, saved resumes, photos, and comments or discussions. You give Addis
           Tech Jobs permission to store, display, process, and use that content as
           needed to operate the service.
         </p>

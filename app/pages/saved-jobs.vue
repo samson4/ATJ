@@ -85,6 +85,16 @@
               </UButton>
             </div>
           </div>
+
+          <template v-if="jobStore.savedJobsTotal > 0" #footer>
+            <div class="flex justify-center">
+              <UPagination
+                v-model:page="page"
+                :items-per-page="itemsPerPage"
+                :total="jobStore.savedJobsTotal"
+              />
+            </div>
+          </template>
         </UCard>
       </div>
     </div>
@@ -130,6 +140,7 @@
 
 <script setup lang="ts">
 import { useJobStore } from '~/stores/job'
+import DisplayConfirmation from '~/components/display/Confirmation.vue'
 
 definePageMeta({
   layout: 'default',
@@ -140,8 +151,11 @@ useSeoMeta({
 })
 
 const jobStore = useJobStore()
+const overlay = useOverlay()
 const detailOpen = ref(false)
 const selectedJob = computed(() => jobStore.selectedJob)
+const page = ref(1)
+const itemsPerPage = 10
 const isMobile = ref(false)
 let mobileMediaQuery: MediaQueryList | null = null
 
@@ -154,7 +168,10 @@ onMounted(async () => {
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   syncMobileView()
   mobileMediaQuery.addEventListener('change', syncMobileView)
-  await jobStore.fetchSavedJobs()
+  await Promise.all([
+    jobStore.fetchSavedJobIds(),
+    jobStore.fetchSavedJobs(page.value, itemsPerPage)
+  ])
 })
 
 onBeforeUnmount(() => {
@@ -172,6 +189,11 @@ watch(() => jobStore.savedJobs.length, () => {
 
   const selectedStillSaved = jobStore.savedJobs.some((job) => job.id === selectedJob.value.id)
   if (!selectedStillSaved) closeDetail()
+})
+
+watch(page, async () => {
+  closeDetail()
+  await jobStore.fetchSavedJobs(page.value, itemsPerPage)
 })
 
 const formatSavedDate = (date?: string | null) => {
@@ -195,8 +217,28 @@ const openSavedJob = (job: any) => {
   detailOpen.value = true
 }
 
-const removeSavedJob = async (jobId?: string) => {
-  await jobStore.unsaveJob(jobId)
+const removeSavedJob = (jobId?: string) => {
+  if (!jobId) return
+
+  const modal = overlay.create(DisplayConfirmation)
+  modal.open({
+    title: 'Remove saved job?',
+    message: 'This job will be removed from your saved jobs.',
+    onConfirm: async () => {
+      const previousTotal = jobStore.savedJobsTotal
+      await jobStore.unsaveJob(jobId)
+      modal.close()
+
+      if (jobStore.savedJobsTotal === previousTotal) return
+
+      const lastPage = Math.max(1, Math.ceil(jobStore.savedJobsTotal / itemsPerPage))
+      if (page.value > lastPage) {
+        page.value = lastPage
+      } else {
+        await jobStore.fetchSavedJobs(page.value, itemsPerPage)
+      }
+    }
+  })
 }
 
 const closeDetail = () => {

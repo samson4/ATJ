@@ -130,6 +130,7 @@ import { useJobStore } from "~/stores/job"
 import { marked } from 'marked';
 import type { Job } from '~/interfaces/jobInterface'
 import { isJobExpired } from '~/utils/jobDeadline'
+import DisplayConfirmation from '~/components/display/Confirmation.vue'
 const { $supabase } = useNuxtApp()
 const props = defineProps({
   job: {
@@ -162,6 +163,7 @@ const props = defineProps({
 
 //data & store usage
 const jobStore = useJobStore()
+const overlay = useOverlay()
 const route = useRoute()
 const jobs = computed<Job[]>(() => {
   return Array.isArray(props.jobs) ? props.jobs as Job[] : jobStore.jobList || []
@@ -271,7 +273,20 @@ const isExpired = (job: Job) => {
   return isJobExpired(job)
 }
 const toggleSaved = async (job: Job) => {
-  await jobStore.toggleSavedJob(job)
+  if (!job.id || !isSaved(job.id)) {
+    await jobStore.saveJob(job)
+    return
+  }
+
+  const modal = overlay.create(DisplayConfirmation)
+  modal.open({
+    title: 'Remove saved job?',
+    message: 'This job will be removed from your saved jobs.',
+    onConfirm: async () => {
+      await jobStore.unsaveJob(job.id)
+      modal.close()
+    }
+  })
 }
 const fetchJobs = async () => {
   loading.value = true

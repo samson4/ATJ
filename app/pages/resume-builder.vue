@@ -1,27 +1,12 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import { billingProductsResponseSchema } from '~~/shared/schemas/billing'
 
-definePageMeta({ layout: 'landing' })
+definePageMeta({ layout: 'default' })
 
 useSeoMeta({
-  title: 'Resume Builder Waitlist | Addis Tech Jobs',
-  description: 'Join the Addis Tech Jobs Resume Builder waitlist and be among the first to create tailored, ATS-friendly resumes.'
+  title: 'Resume Builder | Addis Tech Jobs',
+  description: 'Create tailored, ATS-friendly resumes with flexible Free and Premium plans.'
 })
-
-const { $supabase } = useNuxtApp()
-const schema = z.object({
-  email: z.email('Enter a valid email address')
-})
-
-type Schema = z.output<typeof schema>
-
-const form = reactive<Schema>({ email: '' })
-const submitting = ref(false)
-const joined = ref(false)
-const alreadyJoined = ref(false)
-const errorMessage = ref('')
-const resumeBuilderEnabled = ref(false)
 
 const steps = [
   {
@@ -44,46 +29,26 @@ const steps = [
   }
 ]
 
-onMounted(async () => {
-  const { data: { session } } = await $supabase.auth.getSession()
-  if (!session) return
+const freePlanFeatures = [
+  'Create and save up to 5 resumes',
+  '3 lifetime AI credits',
+  'Every template and unlimited PDF exports',
+  'Edit and preview whenever you need'
+]
 
-  form.email = session.user.email || ''
-
-  try {
-    const access = await $fetch<{ enabled: boolean }>('/api/features/resume-builder', {
-      headers: { Authorization: `Bearer ${session.access_token}` }
-    })
-    resumeBuilderEnabled.value = access.enabled
-  } catch {
-    resumeBuilderEnabled.value = false
-  }
+const { data: productCatalog, status: productCatalogStatus } = await useFetch('/api/billing/products', {
+  key: 'resume-builder-billing-products',
+  transform: data => billingProductsResponseSchema.parse(data)
 })
 
-async function joinWaitlist(event: FormSubmitEvent<Schema>) {
-  submitting.value = true
-  errorMessage.value = ''
+const billingProducts = computed(() => productCatalog.value?.products || [])
 
-  try {
-    const result = await $fetch<{ joined: boolean; alreadyJoined: boolean }>('/api/resume-builder/waitlist', {
-      method: 'POST',
-      body: event.data
-    })
-
-    joined.value = result.joined
-    alreadyJoined.value = result.alreadyJoined
-  } catch (error: any) {
-    errorMessage.value = error.data?.statusMessage || 'We could not add you right now. Please try again.'
-  } finally {
-    submitting.value = false
-  }
-}
 </script>
 
 <template>
-  <main class="resume-waitlist overflow-hidden">
+  <main class="resume-builder overflow-hidden">
     <section class="relative border-b border-muted">
-      <div class="resume-waitlist-grid absolute inset-0 -z-10" />
+      <div class="resume-builder-grid absolute inset-0 -z-10" />
       <div class="absolute left-1/2 top-0 -z-10 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
 
       <UContainer class="pt-14 sm:pt-20 lg:pt-24">
@@ -93,7 +58,7 @@ async function joinWaitlist(event: FormSubmitEvent<Schema>) {
               <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-50" />
               <span class="relative inline-flex size-2 rounded-full bg-primary" />
             </span>
-            Private beta · Waitlist now open
+            Free plan available · Premium when you need more
           </div>
 
           <h1 class="mx-auto mt-7 max-w-4xl text-balance text-5xl font-bold tracking-[-0.045em] text-highlighted sm:text-6xl lg:text-7xl">
@@ -110,69 +75,19 @@ async function joinWaitlist(event: FormSubmitEvent<Schema>) {
             Build clear, role-specific resumes from the experience you already have—with smart guidance built for tech job seekers.
           </p>
 
-          <div id="waitlist" class="mx-auto mt-9 max-w-2xl scroll-mt-24">
-            <div v-if="resumeBuilderEnabled" class="rounded-2xl border border-success/30 bg-default p-3 shadow-xl shadow-success/5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+          <div class="mx-auto mt-9 max-w-2xl">
+            <div class="rounded-2xl border border-success/30 bg-default p-3 shadow-xl shadow-success/5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
               <div class="flex items-center gap-3 text-left">
                 <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-success/10">
                   <UIcon name="i-lucide-circle-check" class="size-5 text-success" />
                 </span>
                 <div>
-                  <p class="font-semibold text-highlighted">Your beta access is ready</p>
-                  <p class="text-sm text-muted">Start building your next resume.</p>
+                  <p class="font-semibold text-highlighted">Resume Builder is ready</p>
+                  <p class="text-sm text-muted">Start free with five resumes and three AI credits.</p>
                 </div>
               </div>
               <UButton to="/resumes" label="Open builder" icon="i-lucide-arrow-right" trailing class="mt-3 sm:mt-0" />
             </div>
-
-            <div v-else-if="joined || alreadyJoined" class="rounded-2xl border border-success/30 bg-default p-5 shadow-xl shadow-success/5" role="status">
-              <div class="flex items-center justify-center gap-3">
-                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-success/10">
-                  <UIcon name="i-lucide-mail-check" class="size-5 text-success" />
-                </span>
-                <div class="text-left">
-                  <p class="font-semibold text-highlighted">{{ alreadyJoined ? 'You’re already on the list' : 'You’re on the waitlist' }}</p>
-                  <p class="text-sm text-muted">We’ll contact {{ form.email }} when access is ready.</p>
-                </div>
-              </div>
-            </div>
-
-            <UForm v-else :schema="schema" :state="form" class="space-y-3" @submit="joinWaitlist">
-              <div class="rounded-2xl border border-default bg-default p-2 shadow-xl shadow-primary/5 sm:flex sm:items-start sm:gap-2">
-                <UFormField name="email" class="flex-1" :ui="{ error: 'text-left' }">
-                  <UInput
-                    v-model="form.email"
-                    type="email"
-                    autocomplete="email"
-                    aria-label="Email address"
-                    placeholder="Enter your email address"
-                    icon="i-lucide-mail"
-                    size="xl"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UButton
-                  type="submit"
-                  label="Join the waitlist"
-                  icon="i-lucide-arrow-right"
-                  trailing
-                  size="xl"
-                  class="mt-2 w-full justify-center sm:mt-0 sm:w-auto"
-                  :loading="submitting"
-                />
-              </div>
-              <UAlert
-                v-if="errorMessage"
-                color="error"
-                variant="subtle"
-                icon="i-lucide-triangle-alert"
-                title="Could not join the waitlist"
-                :description="errorMessage"
-              />
-            </UForm>
-
-            <p v-if="!resumeBuilderEnabled && !joined && !alreadyJoined" class="mt-3 text-xs text-dimmed">
-              Free during beta. No spam—only access and product updates.
-            </p>
           </div>
         </div>
 
@@ -284,7 +199,7 @@ async function joinWaitlist(event: FormSubmitEvent<Schema>) {
               </aside>
             </div>
           </div>
-          <p class="mt-4 text-center text-xs text-dimmed">Illustrative product preview · The experience may change during beta</p>
+          <p class="mt-4 text-center text-xs text-dimmed">Illustrative product preview</p>
         </div>
       </UContainer>
     </section>
@@ -314,16 +229,102 @@ async function joinWaitlist(event: FormSubmitEvent<Schema>) {
       </UContainer>
     </section>
 
+    <section class="relative overflow-hidden border-y border-muted bg-muted/30 py-20 sm:py-28">
+      <div class="absolute left-1/2 top-0 -z-10 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <UContainer>
+        <div class="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-end">
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Straightforward pricing</p>
+            <h2 class="mt-4 max-w-2xl text-balance text-4xl font-bold tracking-tight text-highlighted sm:text-5xl">
+              Start free. Upgrade when your search grows.
+            </h2>
+          </div>
+          <p class="max-w-xl text-base leading-7 text-muted lg:justify-self-end lg:text-right">
+            AI credits are used only for fresh ATS scoring and job matching. Your saved results are always free to view.
+          </p>
+        </div>
+
+        <div class="mx-auto mt-12 max-w-5xl">
+          <article class="flex flex-col rounded-3xl border border-default bg-default p-6 shadow-sm sm:p-8 lg:flex-row lg:items-center lg:gap-10">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-semibold text-highlighted">Free</h3>
+                <p class="text-sm text-muted">Everything you need to begin</p>
+              </div>
+              <UBadge label="Forever" color="neutral" variant="subtle" />
+            </div>
+
+            <div class="mt-8 flex items-end gap-2 lg:mt-0 lg:min-w-36 lg:border-l lg:border-muted lg:pl-8">
+              <span class="text-5xl font-bold tracking-[-0.05em] text-highlighted">0</span>
+              <span class="pb-1 text-sm font-medium text-muted">ETB</span>
+            </div>
+
+            <ul class="mt-7 grid flex-1 gap-x-6 gap-y-3 lg:mt-0 lg:grid-cols-2">
+              <li v-for="feature in freePlanFeatures" :key="feature" class="flex gap-3 text-sm leading-6 text-toned">
+                <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success/10">
+                  <UIcon name="i-lucide-check" class="size-3.5 text-success" />
+                </span>
+                {{ feature }}
+              </li>
+            </ul>
+
+            <UButton
+              to="/resumes"
+              label="Start free"
+              color="neutral"
+              variant="outline"
+              size="lg"
+              class="mt-8 justify-center lg:mt-0 lg:min-w-32"
+            />
+          </article>
+        </div>
+
+        <div class="mx-auto mt-10 max-w-5xl">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p class="text-sm font-semibold text-highlighted">Upgrade options</p>
+              <p class="mt-1 text-sm text-muted">Choose Premium or add credits without changing your plan.</p>
+            </div>
+            <p class="text-xs font-medium text-muted">Three secure, one-time purchases</p>
+          </div>
+
+          <div v-if="productCatalogStatus === 'pending'" class="mt-4 grid gap-4 md:grid-cols-3">
+            <USkeleton v-for="item in 3" :key="item" class="h-[420px] rounded-3xl" />
+          </div>
+          <div v-else-if="billingProducts.length" class="mt-4 grid gap-4 md:grid-cols-3 md:items-stretch">
+            <BillingProductCard
+              v-for="product in billingProducts"
+              :key="product.code"
+              :product="product"
+              :featured="product.kind === 'premium_pass'"
+              :action-label="product.kind === 'premium_pass' ? 'Get Premium' : `Buy ${product.creditAmount} credits`"
+              action-to="/billing"
+            />
+          </div>
+          <UAlert
+            v-else
+            class="mt-4"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            title="Pricing is temporarily unavailable"
+            description="Open Billing to check the latest purchase options."
+            :actions="[{ label: 'Open Billing', to: '/billing', color: 'neutral', variant: 'outline' }]"
+          />
+        </div>
+      </UContainer>
+    </section>
+
     <section class="pb-20 sm:pb-28">
       <UContainer>
         <div class="relative overflow-hidden rounded-3xl bg-inverted px-6 py-12 text-center sm:px-12 sm:py-16">
           <div class="absolute -left-20 -top-24 size-64 rounded-full bg-primary/20 blur-3xl" />
           <div class="absolute -bottom-32 -right-16 size-72 rounded-full bg-primary/15 blur-3xl" />
           <div class="relative mx-auto max-w-2xl">
-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Private beta</p>
-            <h2 class="mt-4 text-3xl font-bold tracking-tight text-inverted sm:text-4xl">Be first in line for a smarter way to build your resume.</h2>
-            <p class="mt-4 leading-7 text-inverted/70">Join the waitlist and we’ll let you know as soon as your access is ready.</p>
-            <UButton to="#waitlist" label="Get early access" icon="i-lucide-arrow-up-right" trailing size="lg" class="mt-7" />
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Start free</p>
+            <h2 class="mt-4 text-3xl font-bold tracking-tight text-inverted sm:text-4xl">Build a stronger resume for your next opportunity.</h2>
+            <p class="mt-4 leading-7 text-inverted/70">Create up to five resumes for free and upgrade only when you need more capacity or AI credits.</p>
+            <UButton to="/resumes" label="Open Resume Builder" icon="i-lucide-arrow-up-right" trailing size="lg" class="mt-7" />
           </div>
         </div>
       </UContainer>
@@ -332,7 +333,7 @@ async function joinWaitlist(event: FormSubmitEvent<Schema>) {
 </template>
 
 <style scoped>
-.resume-waitlist-grid {
+.resume-builder-grid {
   background-image:
     linear-gradient(to right, color-mix(in srgb, var(--ui-border-muted) 55%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--ui-border-muted) 55%, transparent) 1px, transparent 1px);

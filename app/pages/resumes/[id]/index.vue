@@ -4,13 +4,15 @@ import { resumeAtsCategoryDefinitions } from '~~/shared/data/resumeAts'
 import { resumeTemplateByKey } from '~~/shared/data/resumeTemplates'
 import type { ResumeAtsScoreResponse, ResumeDocument, ResumeTemplateKey } from '~~/shared/types/resume'
 import { useResumeStore } from '~/stores/resume'
+import { useBillingStore } from '~/stores/billing'
 
-definePageMeta({ layout: 'resume', middleware: ['auth', 'resume-beta'] })
+definePageMeta({ layout: 'resume', middleware: ['auth'] })
 useSeoMeta({ title: 'Edit Resume | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const route = useRoute()
 const router = useRouter()
 const store = useResumeStore()
+const billing = useBillingStore()
 const toast = useToast()
 const mobileView = ref<'edit' | 'preview'>('edit')
 const editorReady = ref(false)
@@ -23,6 +25,7 @@ const atsLoading = ref(false)
 const atsLoadingMessage = ref('Loading latest ATS score…')
 const atsError = ref('')
 const atsResult = ref<ResumeAtsScoreResponse>()
+const atsLatestLoaded = ref(false)
 const atsScoredSnapshot = ref('')
 const copiedSuggestedFix = ref('')
 let copiedSuggestedFixTimer: ReturnType<typeof setTimeout> | null = null
@@ -33,6 +36,12 @@ const templateName = computed(() => store.currentResume
   ? resumeTemplateByKey[store.currentResume.template_key].name
   : '')
 const atsContentSnapshot = computed(() => JSON.stringify(store.currentResume?.content ?? null))
+const atsGaugeScore = computed(() => atsResult.value?.score ?? 0)
+const atsGaugeLabel = computed(() => atsLoading.value
+  ? 'Loading latest ATS score'
+  : atsResult.value
+    ? `ATS score: ${atsResult.value.score} out of 100${atsOutdated.value ? ', score is out of date' : ''}`
+    : 'ATS score: 0 out of 100, not scored yet')
 const atsOutdated = computed(() => Boolean(atsResult.value && (
   atsResult.value.outdated || atsScoredSnapshot.value !== atsContentSnapshot.value
 )))
@@ -57,11 +66,13 @@ const statusPresentation = computed(() => ({
 }[store.saveStatus]))
 
 onMounted(async () => {
+  void billing.fetchStatus().catch(() => undefined)
   const resume = await store.fetchResume(String(route.params.id))
   if (!resume) return
   await nextTick()
   editorReady.value = true
   window.addEventListener('beforeunload', beforeUnload)
+  void loadLatestAtsScore()
 })
 
 watch(editableSnapshot, (current, previous) => {
@@ -120,20 +131,22 @@ function applyTemplate() {
 async function openAtsScore() {
   if (!store.currentResume) return
   atsOpen.value = true
-  if (atsResult.value) return
+  if (atsResult.value || atsLoading.value || atsLatestLoaded.value) return
+  await store.flushSave()
+  await loadLatestAtsScore()
+}
+
+async function loadLatestAtsScore() {
+  if (!store.currentResume || atsResult.value || atsLoading.value) return
   atsLoading.value = true
   atsLoadingMessage.value = 'Loading latest ATS score…'
   atsError.value = ''
   try {
-    await store.flushSave()
     const latest = await store.fetchLatestAtsScore(store.currentResume.id)
+    atsLatestLoaded.value = true
     if (latest) {
       atsResult.value = latest
       atsScoredSnapshot.value = latest.outdated ? '' : atsContentSnapshot.value
-    } else {
-      atsLoadingMessage.value = 'Analyzing resume…'
-      atsResult.value = await store.assessResume(store.currentResume.id, true)
-      atsScoredSnapshot.value = atsContentSnapshot.value
     }
   } catch (error: any) {
     atsError.value = error.data?.statusMessage || error.message || 'Could not load the latest ATS score.'
@@ -150,7 +163,9 @@ async function runAtsScore() {
   try {
     await store.flushSave()
     atsResult.value = await store.assessResume(store.currentResume.id, true)
+    atsLatestLoaded.value = true
     atsScoredSnapshot.value = atsContentSnapshot.value
+    await billing.fetchStatus().catch(() => undefined)
   } catch (error: any) {
     atsError.value = error.data?.statusMessage || error.message || 'Could not assess this resume.'
   } finally {
@@ -180,14 +195,20 @@ async function copySuggestedFix(key: string, value: string) {
           <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" aria-label="Back to resumes" @click="router.push('/resumes')" />
           <div class="min-w-0"><UInput v-if="store.currentResume" v-model="store.currentResume.name" maxlength="120" variant="none" class="w-full text-lg font-semibold" aria-label="Resume name" /><div class="flex items-center gap-1"><p class="text-xs text-muted">{{ templateName }} template</p></div></div>
         </div>
-        <UButton label="Templates" size="md" icon="i-lucide-layout-template" color="primary" variant="subtle" class="px-3" @click="openTemplatePicker" />
+        <UButton label="Templates" size="lg" icon="i-lucide-layout-template" color="primary" variant="outline" class="px-3" @click="openTemplatePicker" />
 
         <div class="flex flex-wrap items-center gap-2">
           <UBadge v-if="store.currentResume" :label="statusPresentation.label" :color="statusPresentation.color" variant="subtle" :icon="statusPresentation.icon" />
-          <UButton v-if="store.saveStatus === 'error'" label="Retry save" icon="i-lucide-refresh-cw" color="error" variant="outline" @click="retrySave" />
+          <UButton v-if="store.saveStatus === 'error'" size="sm" label="Retry save" icon="i-lucide-refresh-cw" color="error" variant="outline" @click="retrySave" />
           <!-- <UButton label="Save" icon="i-lucide-save" color="neutral" variant="outline" :loading="store.saveStatus === 'saving'" :disabled="!store.currentResume || store.saveStatus === 'saved'" @click="saveNow" /> -->
-          <UButton label="ATS Score" icon="i-lucide-gauge" color="neutral" variant="outline" :loading="atsLoading" :disabled="!store.currentResume" @click="openAtsScore()" />
-          <UButton label="Download PDF" icon="i-lucide-download" :loading="downloading" :disabled="!store.currentResume" @click="download" />
+          <UTooltip :text="atsGaugeLabel">
+            <UButton color="neutral" size="lg" variant="outline" :disabled="!store.currentResume" :aria-label="atsGaugeLabel" class="gap-2" @click="openAtsScore()">
+              <ResumeAtsGauge :value="atsGaugeScore" :has-score="Boolean(atsResult)" :outdated="atsOutdated" decorative />
+              <span>ATS Score</span>
+              <UIcon v-if="atsLoading" name="i-lucide-loader-circle" class="size-4 animate-spin text-muted" />
+            </UButton>
+          </UTooltip>
+          <UButton label="Download PDF" size="lg" icon="i-lucide-download" :loading="downloading" :disabled="!store.currentResume" @click="download" />
         </div>
       </div>
 
@@ -222,12 +243,14 @@ async function copySuggestedFix(key: string, value: string) {
             <UAlert v-if="atsError" color="error" icon="i-lucide-triangle-alert" title="Could not update ATS score" :description="atsError" />
             <UAlert v-if="atsOutdated" color="warning" icon="i-lucide-refresh-cw" title="This score is out of date" description="Your resume content changed after this assessment." />
             <div class="rounded-xl bg-elevated p-5">
-              <div class="flex items-end justify-between gap-4">
-                <div><p class="text-sm text-muted">General readiness</p><p class="text-4xl font-bold text-highlighted">{{ atsResult.score }}<span class="text-lg font-medium text-muted">/100</span></p></div>
-                <UBadge :color="atsColor" variant="subtle" :label="atsResult.score >= 80 ? 'Strong' : atsResult.score >= 60 ? 'Developing' : 'Needs work'" />
+              <div class="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+                <ResumeAtsGauge :value="atsResult.score" size="large" has-score :outdated="atsOutdated" />
+                <div class="min-w-0 flex-1 text-center sm:text-left">
+                  <p class="text-sm font-medium text-muted">General readiness</p>
+                  <UBadge class="mt-2" :color="atsColor" variant="subtle" :label="atsResult.score >= 80 ? 'Strong' : atsResult.score >= 60 ? 'Developing' : 'Needs work'" />
+                  <p class="mt-4 text-sm leading-6 text-muted">{{ atsResult.summary }}</p>
+                </div>
               </div>
-              <UProgress class="mt-4" :model-value="atsResult.score" :color="atsColor" />
-              <p class="mt-4 text-sm leading-6 text-muted">{{ atsResult.summary }}</p>
             </div>
 
             <div>
@@ -252,10 +275,10 @@ async function copySuggestedFix(key: string, value: string) {
 
             <p class="text-xs leading-5 text-muted">This is a general readiness estimate, not a job-match score or a guarantee from an employer’s ATS.</p>
           </div>
-          <div v-else class="py-10 text-center"><UIcon name="i-lucide-gauge" class="mx-auto size-9 text-muted" /><h3 class="mt-3 font-semibold text-highlighted">No ATS score yet</h3><p class="mt-1 text-sm text-muted">Run the scorer when you are ready to assess this resume.</p></div>
+          <div v-else class="py-10 text-center"><UIcon name="i-lucide-gauge" class="mx-auto size-9 text-muted" /><h3 class="mt-3 font-semibold text-highlighted">No ATS score yet</h3><p class="mt-1 text-sm text-muted">Analyze this resume when you are ready. A fresh score uses 1 AI credit.</p><p v-if="billing.status" class="mt-2 text-xs text-muted">{{ billing.status.credits.total }} credits available</p><UButton v-if="billing.status?.credits.total === 0" to="/billing" label="Get credits" class="mt-4" /></div>
         </template>
         <template v-if="!atsLoading" #footer>
-          <div class="flex w-full justify-end gap-2"><UButton label="Close" color="neutral" variant="outline" @click="atsOpen = false" /><UButton :label="!atsResult ? 'Run ATS score' : atsOutdated ? 'Score updated resume' : 'Rerun score'" icon="i-lucide-refresh-cw" @click="runAtsScore" /></div>
+          <div class="flex w-full justify-end gap-2"><UButton label="Close" color="neutral" variant="outline" @click="atsOpen = false" /><UButton :label="!atsResult ? 'Analyze · 1 credit' : atsOutdated ? 'Score updated resume · 1 credit' : 'Rerun · 1 credit'" icon="i-lucide-refresh-cw" :disabled="billing.status?.credits.total === 0" @click="runAtsScore" /></div>
         </template>
       </UModal>
   </div>

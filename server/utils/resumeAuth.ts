@@ -18,26 +18,3 @@ export async function requireResumeUser(event: H3Event) {
 
   return { supabase, user }
 }
-
-export function hasResumeBuilderBetaAccess(email: string | undefined, allowlist: unknown) {
-  if (!email) return false
-
-  const normalizedEmail = email.trim().toLowerCase()
-  return String(allowlist || '')
-    .split(',')
-    .some(allowedEmail => allowedEmail.trim().toLowerCase() === normalizedEmail)
-}
-
-export async function requireResumeBetaUser(event: H3Event) {
-  const auth = await requireResumeUser(event)
-  const config = useRuntimeConfig(event)
-
-  if (!hasResumeBuilderBetaAccess(auth.user.email, config.resumeBuilderBetaEmails)) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Resume Builder beta access is required'
-    })
-  }
-
-  return auth
-}

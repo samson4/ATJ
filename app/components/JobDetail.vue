@@ -7,6 +7,7 @@ import { isJobExpired } from '~/utils/jobDeadline'
 import { resumeJobMatchCategoryDefinitions } from '~~/shared/data/resumeJobMatch'
 import type { ResumeJobMatchResponse } from '~~/shared/types/resume'
 import { useResumeStore } from '~/stores/resume'
+import { useBillingStore } from '~/stores/billing'
 
 withDefaults(defineProps<{
   fullHeight?: boolean
@@ -16,6 +17,8 @@ withDefaults(defineProps<{
 
 const jobStore = useJobStore();
 const resumeStore = useResumeStore();
+const billing = useBillingStore();
+const { $supabase } = useNuxtApp();
 const selectedJob = computed<Job>(() => jobStore.selectedJob || ({} as Job));
 const toast = useToast();
 const requestUrl = useRequestURL();
@@ -81,6 +84,7 @@ const isApplying = computed(() => jobStore.isApplyingJob(selectedJob.value?.id))
 const isExpired = computed(() => isJobExpired(selectedJob.value));
 const applicationPromptJobId = ref<string | null>(null);
 const resumeMatchOpen = ref(false);
+const resumeMatchAuthenticated = ref(false);
 const resumeMatchLoading = ref(false);
 const resumeMatchError = ref('');
 const selectedResumeId = ref('');
@@ -108,6 +112,11 @@ const showApplicationPrompt = computed(() => {
     && !dismissedApplicationPromptJobIds.value.includes(jobId);
 });
 
+onMounted(async () => {
+  const { data: { session } } = await $supabase.auth.getSession();
+  resumeMatchAuthenticated.value = Boolean(session?.access_token);
+});
+
 const toggleSaved = async () => {
   await jobStore.toggleSavedJob(selectedJob.value);
 };
@@ -133,35 +142,47 @@ const copyJobLink = async () => {
     });
   }
 };
-const jobActionItems = computed(() => [[
-  {
-    label: 'Copy link',
-    icon: 'i-lucide-link',
-    onSelect: copyJobLink
-  },
-  {
-    label: isSaved.value ? 'Remove saved job' : 'Save job',
-    icon: isSaved.value ? 'i-lucide-bookmark-x' : 'i-lucide-bookmark',
-    disabled: isSaving.value || (isExpired.value && !isSaved.value),
-    onSelect: toggleSaved
-  }
-]]);
+const jobActionItems = computed(() => [
+  ...(isApplied.value
+    ? [[{
+        label: 'Application tracked',
+        icon: 'i-lucide-clipboard-check',
+        disabled: true
+      }]]
+    : []),
+  [
+    {
+      label: 'Copy link',
+      icon: 'i-lucide-link',
+      onSelect: copyJobLink
+    },
+    {
+      label: isSaved.value ? 'Remove saved job' : 'Save job',
+      icon: isSaved.value ? 'i-lucide-bookmark-x' : 'i-lucide-bookmark',
+      disabled: isSaving.value || (isExpired.value && !isSaved.value),
+      onSelect: toggleSaved
+    }
+  ]
+]);
 const openApplyLink = (link: string) => {
-  if (link.startsWith('mailto:')) {
-    window.location.href = link;
-    return;
-  }
-
   window.open(link, '_blank', 'noopener,noreferrer');
 };
 
 const submitApplication = async () => {
   if (!applyLink.value || isExpired.value) return;
 
+  const jobId = selectedJob.value?.id;
+  const shouldPrompt = !!jobId
+    && !isApplied.value
+    && !dismissedApplicationPromptJobIds.value.includes(jobId);
+
+  if (shouldPrompt && resumeMatchAuthenticated.value) {
+    applicationPromptJobId.value = jobId;
+  }
+
   openApplyLink(applyLink.value);
 
-  const jobId = selectedJob.value?.id;
-  if (!jobId || isApplied.value || dismissedApplicationPromptJobIds.value.includes(jobId)) return;
+  if (!shouldPrompt || resumeMatchAuthenticated.value) return;
 
   const user = await jobStore.getCurrentUser();
   if (user) {
@@ -198,6 +219,7 @@ watch(() => selectedJob.value?.id, () => {
 
 async function openResumeMatch() {
   resumeMatchOpen.value = true;
+  void billing.fetchStatus().catch(() => undefined);
   if (resumeStore.resumes.length || resumeMatchLoading.value) return;
   resumeMatchLoading.value = true;
   resumeMatchError.value = '';
@@ -209,6 +231,8 @@ async function openResumeMatch() {
 
 async function selectResumeForMatch(resumeId: string) {
   selectedResumeId.value = resumeId;
+  resumeMatchResult.value = undefined;
+  resumeMatchError.value = '';
   await runResumeMatch(false);
 }
 
@@ -217,9 +241,8 @@ async function runResumeMatch(force: boolean) {
   resumeMatchLoading.value = true;
   resumeMatchError.value = '';
   try {
-    resumeMatchResult.value = await resumeStore.matchResumeToJob(
-      String(selectedJob.value.id), selectedResumeId.value, force
-    );
+    resumeMatchResult.value = await resumeStore.matchResumeToJob(String(selectedJob.value.id), selectedResumeId.value, force);
+    await billing.fetchStatus().catch(() => undefined);
   } catch (error: any) {
     resumeMatchError.value = error.data?.statusMessage || error.message || 'Could not score this resume for the job.';
   } finally {
@@ -362,18 +385,11 @@ function changeMatchResume() {
             </div>
           </div>
 
-          <div
-            v-else-if="selectedJob.id && isApplied"
-            class="flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary sm:justify-start"
-          >
-            <UIcon name="i-lucide-clipboard-check" class="size-4" />
-            <span class="font-medium">Application tracked</span>
-          </div>
         </div>
       </div>
     </template>
 
-    <div v-if="selectedJob.id && !isExpired" class="mb-4 flex justify-end">
+    <div v-if="selectedJob.id && !isExpired && resumeMatchAuthenticated" class="mb-4 flex justify-end">
       <UButton
         label="Resume match"
         icon="i-lucide-file-search"
@@ -404,7 +420,7 @@ function changeMatchResume() {
         </div>
         <div v-else-if="resumeMatchError && !resumeMatchResult" class="space-y-4">
           <UAlert color="error" icon="i-lucide-triangle-alert" title="Could not check resume match" :description="resumeMatchError" />
-          <div class="flex justify-end"><UButton v-if="selectedResumeId" label="Try again" icon="i-lucide-refresh-cw" @click="runResumeMatch(false)" /></div>
+          <div class="flex justify-end"><UButton v-if="selectedResumeId" label="Try again · 1 credit" icon="i-lucide-refresh-cw" :disabled="billing.status?.credits.total === 0" @click="runResumeMatch(false)" /></div>
         </div>
         <div v-else-if="resumeMatchResult" class="space-y-6">
           <UAlert v-if="resumeMatchError" color="error" title="Could not refresh this match" :description="resumeMatchError" />
@@ -448,7 +464,7 @@ function changeMatchResume() {
         </div>
       </template>
       <template v-if="!resumeMatchLoading" #footer>
-        <div class="flex w-full justify-end gap-2"><UButton v-if="resumeMatchResult" label="Change resume" color="neutral" variant="ghost" @click="changeMatchResume" /><UButton label="Close" color="neutral" variant="outline" @click="resumeMatchOpen = false" /><UButton v-if="resumeMatchResult" label="Rerun match" icon="i-lucide-refresh-cw" @click="runResumeMatch(true)" /></div>
+        <div class="flex w-full justify-end gap-2"><UButton v-if="resumeMatchResult" label="Change resume" color="neutral" variant="ghost" @click="changeMatchResume" /><UButton label="Close" color="neutral" variant="outline" @click="resumeMatchOpen = false" /><UButton v-if="resumeMatchResult" label="Rerun · 1 credit" icon="i-lucide-refresh-cw" :disabled="billing.status?.credits.total === 0" @click="runResumeMatch(true)" /></div>
       </template>
     </UModal>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'landing' })
 
-const effectiveDate = 'August 31, 2026'
+const effectiveDate = 'October 11, 2026'
 const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 useSeoMeta({
@@ -14,7 +14,7 @@ useSeoMeta({
   <UContainer class="py-12">
     <UPageHero
       title="Privacy Policy"
-      description="How Addis Tech Jobs handles account, profile, job activity, and uploaded document information."
+      description="How Addis Tech Jobs handles account, profile, job activity, resume, AI, and payment information."
     />
 
     <article class="mx-auto max-w-3xl space-y-8 text-toned">
@@ -41,9 +41,10 @@ useSeoMeta({
         </h2>
         <ul class="list-disc space-y-2 pl-6">
           <li>Account information such as email address, authentication details, and account status.</li>
-          <li>Profile information such as full name, bio, skills, experience, education, portfolio links, GitHub, LinkedIn, profile photo, and CV or resume link.</li>
+          <li>Profile information such as full name, bio, skills, experience, education, portfolio links, GitHub, LinkedIn, and profile photo.</li>
+          <li>Resume Builder information such as saved resume content, selected templates, and saved AI assessment results.</li>
           <li>Job activity such as saved jobs, tracked applications, clicked application links, and related timestamps.</li>
-          <li>Uploaded files such as profile photos and CV or resume documents you choose to upload.</li>
+          <li>Uploaded profile photos and PDF resumes you temporarily submit for import.</li>
           <li>Technical information such as device, browser, IP address, pages visited, and usage analytics.</li>
           <li>Communications you send to us through forms, email, or support requests.</li>
         </ul>
@@ -55,7 +56,7 @@ useSeoMeta({
         </h2>
         <ul class="list-disc space-y-2 pl-6">
           <li>Create and manage user accounts.</li>
-          <li>Provide saved jobs, application tracking, profile, and document features.</li>
+          <li>Provide saved jobs, application tracking, profile, Resume Builder, and PDF export features.</li>
           <li>Improve job search, recommendations, platform performance, and user experience.</li>
           <li>Secure the platform, prevent abuse, and troubleshoot technical issues.</li>
           <li>Respond to support requests and communicate service updates.</li>
@@ -81,16 +82,45 @@ useSeoMeta({
 
       <section class="space-y-3">
         <h2 class="text-2xl font-semibold text-highlighted">
-          Uploaded CVs and Profile Photos
+          Resume Imports and Profile Photos
         </h2>
         <p>
-          If you upload a CV, resume, or profile photo, we store it using cloud
-          storage connected to your account. These files are used to support your
-          profile features unless you choose to share them elsewhere.
+          Profile photos are stored in cloud storage connected to your account.
+          When you import a PDF resume in the Resume Builder, the PDF is processed
+          for that import request and is not saved to your profile or retained as an
+          uploaded file. We extract its text and convert it into editable structured
+          resume data.
         </p>
         <p>
-          Do not upload sensitive documents unless you are comfortable storing them
-          in your account.
+          If you save the imported resume, its structured content is stored in your
+          account. Generated resume PDFs are created on request from that saved
+          content rather than stored as your original uploaded PDF.
+        </p>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-2xl font-semibold text-highlighted">AI Resume Processing</h2>
+        <p>
+          When you use AI resume import, ATS scoring, or job matching, the relevant extracted resume text, saved
+          resume content, and job text is sent to our configured AI provider to produce the requested result. The
+          provider is instructed to process this information only for the requested extraction or assessment, but its
+          own privacy and security terms also apply.
+        </p>
+        <p>
+          We store validated structured results and non-reversible content hashes so saved or identical requests can
+          be reused without another AI call. Successful resume-import results may be cached for up to 90 days. Saved
+          ATS and job-match results remain associated with the relevant account, resume, or job until they are removed
+          under our retention practices. Billing and operational logs do not contain raw resume text, uploaded PDF
+          contents, AI prompts, or AI responses.
+        </p>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-2xl font-semibold text-highlighted">Payments</h2>
+        <p>
+          Chapa processes Resume Builder payments. We send the information required to initialize and verify your
+          payment, such as your email, name, amount, currency, and transaction reference. We store order status and
+          provider references, but we do not receive or store your payment account credentials.
         </p>
       </section>
 

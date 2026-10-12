@@ -22,6 +22,8 @@ type ParseResume = (
 export interface ResumeParseCacheOptions extends ResumeAiParserOptions {
   supabase: CacheClient
   parse?: ParseResume
+  beforeParse?: () => Promise<void>
+  afterParse?: (result: ResumeAiParserResult) => Promise<void>
 }
 
 const inFlightParses = new Map<string, Promise<ResumeAiParserResult>>()
@@ -102,14 +104,19 @@ async function parseWithPersistentCache(
     // Continue to the parser.
   }
 
-  const { supabase: _supabase, parse, ...parserOptions } = options
+  await options.beforeParse?.()
+  const { supabase: _supabase, parse, beforeParse: _beforeParse, afterParse, ...parserOptions } = options
   const result = await (parse || parseResumeWithAiFallback)(rawText, parserOptions)
 
+  let cacheWriteFailed = false
   try {
     await writeCachedDocument(options.supabase, options.userId, inputHash, model, result)
   } catch {
-    // A successful import must not fail because the cache could not be saved.
+    cacheWriteFailed = result.parser === 'gemini'
   }
+
+  if (cacheWriteFailed) throw new Error('Could not save the AI resume result')
+  await afterParse?.(result)
 
   return result
 }

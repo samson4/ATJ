@@ -10,17 +10,8 @@ import type {
 } from '~~/shared/types/resume'
 import { createEmptyResumeDocument, createResumeFromProfile, sanitizeDownloadName } from '~~/shared/utils/resume'
 
-const CV_BUCKET = 'profile-documents'
 const CV_MIME_TYPE = 'application/pdf'
 const MAX_CV_SIZE = 10 * 1024 * 1024
-
-function sanitizeCvFileName(fileName: string) {
-  return fileName
-    .normalize('NFKD')
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 120) || 'cv.pdf'
-}
 
 function validateCvFile(file: File) {
   if ((file.type && file.type !== CV_MIME_TYPE) || !file.name.toLowerCase().endsWith('.pdf')) {
@@ -103,7 +94,7 @@ export const useResumeStore = defineStore('resume', () => {
     }
   }
 
-  async function prepareResumeSource(source: ResumeCreationSource) {
+  async function prepareResumeSource(source: ResumeCreationSource, basic = false) {
     const user = await requireUser()
     if (source === 'blank') {
       importWarnings.value = []
@@ -122,60 +113,19 @@ export const useResumeStore = defineStore('resume', () => {
       }
     }
 
-    importWarnings.value = []
-    const token = await accessToken()
-    const imported = resumeImportResponseSchema.parse(await $fetch('/api/resumes/import-cv', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }
-    }))
-    if (imported.status === 'cv-required') return imported
-    importWarnings.value = imported.warnings
-    return { status: 'ready' as const, document: imported.document, sourceCvPath: imported.sourceCvPath }
+    return {
+      status: 'cv-required' as const,
+      warning: 'Choose a PDF resume to import.'
+    }
   }
 
-  async function uploadProfileCv(file: File) {
-    validateCvFile(file)
-
-    const { $supabase } = useNuxtApp()
-    const user = await requireUser()
-    const { data: profile, error: profileLookupError } = await $supabase
-      .from('profiles')
-      .select('cv_file_path, cv_file_name')
-      .eq('id', user.id)
-      .maybeSingle()
-    if (profileLookupError) throw profileLookupError
-
-    if (profile?.cv_file_path || profile?.cv_file_name) {
-      return { path: profile.cv_file_path || null, uploaded: false as const }
-    }
-
-    const cvPath = `${user.id}/cv/${Date.now()}-${sanitizeCvFileName(file.name)}`
-    const { error: uploadError } = await $supabase.storage
-      .from(CV_BUCKET)
-      .upload(cvPath, file, { contentType: CV_MIME_TYPE, upsert: false })
-    if (uploadError) throw uploadError
-
-    const { error: profileError } = await $supabase.from('profiles').upsert({
-      id: user.id,
-      cv_file_path: cvPath,
-      cv_file_name: file.name,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'id' })
-
-    if (profileError) {
-      await $supabase.storage.from(CV_BUCKET).remove([cvPath])
-      throw profileError
-    }
-
-    return { path: cvPath, uploaded: true as const }
-  }
-
-  async function prepareResumeSourceFromFile(file: File, sourceCvPath: string | null = null) {
+  async function prepareResumeSourceFromFile(file: File, basic = false) {
     validateCvFile(file)
     importWarnings.value = []
     const token = await accessToken()
     const body = new FormData()
     body.append('file', file, file.name)
+    if (basic) body.append('mode', 'basic')
     const imported = resumeImportResponseSchema.parse(await $fetch('/api/resumes/import-cv', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -186,7 +136,7 @@ export const useResumeStore = defineStore('resume', () => {
     return {
       status: 'ready' as const,
       document: imported.document,
-      sourceCvPath
+      sourceCvPath: null
     }
   }
 
@@ -197,39 +147,40 @@ export const useResumeStore = defineStore('resume', () => {
     prepared?: { document: ResumeDocument, sourceCvPath: string | null }
   ) {
     if (!prepared) importWarnings.value = []
-    const { $supabase } = useNuxtApp()
-    const user = await requireUser()
+    await requireUser()
     const resolved = prepared
       ? { status: 'ready' as const, ...prepared }
       : await prepareResumeSource(source)
     if (resolved.status === 'cv-required') throw new Error(resolved.warning)
     const document = resumeDocumentSchema.parse(resolved.document)
-    const { data, error } = await $supabase.from('resumes').insert({
-      user_id: user.id,
-      name: name.trim() || 'Untitled Resume',
-      template_key: templateKey,
-      schema_version: 1,
-      content: document,
-      source_cv_path: resolved.sourceCvPath
-    }).select('*').single()
-    if (error) throw error
+    const token = await accessToken()
+    const data = await $fetch('/api/resumes', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        name: name.trim() || 'Untitled Resume',
+        template_key: templateKey,
+        content: document,
+        source_cv_path: resolved.sourceCvPath
+      }
+    })
     const resume = resumeRowSchema.parse(data)
     resumes.value.unshift(resume)
     return resume
   }
 
   async function duplicateResume(resume: ResumeRow) {
-    const { $supabase } = useNuxtApp()
-    const user = await requireUser()
-    const { data, error } = await $supabase.from('resumes').insert({
-      user_id: user.id,
-      name: `${resume.name} copy`.slice(0, 120),
-      template_key: resume.template_key,
-      schema_version: resume.schema_version,
-      content: resumeDocumentSchema.parse(plainResumeContent(resume.content)),
-      source_cv_path: resume.source_cv_path
-    }).select('*').single()
-    if (error) throw error
+    const token = await accessToken()
+    const data = await $fetch('/api/resumes', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        name: `${resume.name} copy`.slice(0, 120),
+        template_key: resume.template_key,
+        content: resumeDocumentSchema.parse(plainResumeContent(resume.content)),
+        source_cv_path: resume.source_cv_path
+      }
+    })
     const copy = resumeRowSchema.parse(data)
     resumes.value.unshift(copy)
     return copy
@@ -351,7 +302,7 @@ export const useResumeStore = defineStore('resume', () => {
     const token = await accessToken()
     return resumeAtsScoreResponseSchema.parse(await $fetch(`/api/resumes/${id}/ats-score`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'Idempotency-Key': crypto.randomUUID() },
       body: { force }
     }))
   }
@@ -360,7 +311,7 @@ export const useResumeStore = defineStore('resume', () => {
     const token = await accessToken()
     return resumeJobMatchResponseSchema.parse(await $fetch(`/api/jobs/${jobId}/resume-match`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'Idempotency-Key': crypto.randomUUID() },
       body: { resumeId, force }
     }))
   }
@@ -384,7 +335,6 @@ export const useResumeStore = defineStore('resume', () => {
     fetchResume,
     prepareResumeSource,
     prepareResumeSourceFromFile,
-    uploadProfileCv,
     createResume,
     duplicateResume,
     renameResume,

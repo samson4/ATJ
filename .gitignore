@@ -34,4 +34,6 @@ services/*
 supabase/*
 !supabase/migrations/
 supabase/migrations/*
-!supabase/migrations/20261011000000_create_resume_builder_waitlist.sql
+!supabase/migrations/20261011010000_paid_resume_builder.sql
+!supabase/migrations/20261011020000_remove_profile_cv_storage.sql
+!supabase/migrations/20261011030000_remove_resume_beta.sql

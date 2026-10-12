@@ -2,11 +2,13 @@
 import type { ResumeCreationSource, ResumeDocument, ResumeRow, ResumeTemplateKey } from '~~/shared/types/resume'
 import { resumeTemplateByKey } from '~~/shared/data/resumeTemplates'
 import { useResumeStore } from '~/stores/resume'
+import { useBillingStore } from '~/stores/billing'
 
-definePageMeta({ layout: 'default', middleware: ['auth', 'resume-beta'] })
+definePageMeta({ layout: 'default', middleware: ['auth'] })
 useSeoMeta({ title: 'Resume Builder | Addis Tech Jobs', robots: 'noindex, nofollow' })
 
 const store = useResumeStore()
+const billing = useBillingStore()
 const toast = useToast()
 const router = useRouter()
 const createOpen = ref(false)
@@ -14,11 +16,9 @@ const cvUploadOpen = ref(false)
 const renameOpen = ref(false)
 const deleteOpen = ref(false)
 const creating = ref(false)
-const cvUploadStage = ref<'idle' | 'uploading' | 'parsing'>('idle')
+const cvUploadStage = ref<'idle' | 'parsing'>('idle')
 const selectedCvFile = ref<File | null>(null)
 const cvUploadError = ref('')
-const selectedCvUploaded = ref(false)
-const selectedCvSourcePath = ref<string | null>(null)
 const workingId = ref('')
 const selected = ref<ResumeRow | null>(null)
 const newName = ref('Targeted Resume')
@@ -38,24 +38,22 @@ let preparationGeneration = 0
 
 const uploadingCv = computed(() => cvUploadStage.value !== 'idle')
 const cvUploadButtonLabel = computed(() => {
-  if (cvUploadStage.value === 'uploading') return 'Uploading CV…'
   if (cvUploadStage.value === 'parsing') return 'Reading CV…'
-  if (selectedCvUploaded.value) return 'Try reading again'
-  return 'Upload and continue'
+  return 'Import CV'
 })
 
 const creationOptions = [
   { label: 'Blank resume', value: 'blank', description: 'Start with empty sections.' },
   { label: 'From profile', value: 'profile', description: 'Copy your profile details into a new independent draft.' },
-  { label: 'Import uploaded CV', value: 'cv', description: 'Extract editable content from the PDF saved in your profile.' },
+  { label: 'Import a PDF resume', value: 'cv', description: 'Upload a PDF and convert it into an editable resume.' },
 ]
 
-onMounted(() => store.fetchResumes())
+onMounted(() => Promise.all([store.fetchResumes(), billing.fetchStatus()]).catch(() => undefined))
 
 async function prepareCreationSource(
   source: ResumeCreationSource,
   file?: File,
-  sourceCvPath: string | null = null
+  basic = false
 ): Promise<boolean> {
   const activeGeneration = ++preparationGeneration
   creationPreviewLoading.value = true
@@ -65,8 +63,8 @@ async function prepareCreationSource(
   preparedCreation.value = undefined
   try {
     const resolved = file
-      ? await store.prepareResumeSourceFromFile(file, sourceCvPath)
-      : await store.prepareResumeSource(source)
+      ? await store.prepareResumeSourceFromFile(file, basic)
+      : await store.prepareResumeSource(source, basic)
     if (activeGeneration !== preparationGeneration) return false
     if (resolved.status === 'cv-required') {
       creationPreviewError.value = resolved.warning
@@ -94,9 +92,9 @@ watch([createOpen, creationSource], ([open, source]) => {
     cvUploadOpen.value = false
     selectedCvFile.value = null
     cvUploadError.value = ''
-    selectedCvUploaded.value = false
-    selectedCvSourcePath.value = null
     cvUploadStage.value = 'idle'
+    preparedCreation.value = undefined
+    creationPreviewDocument.value = undefined
     return
   }
 
@@ -104,30 +102,32 @@ watch([createOpen, creationSource], ([open, source]) => {
     cvUploadOpen.value = false
     selectedCvFile.value = null
     cvUploadError.value = ''
+  } else {
+    preparedCreation.value = undefined
+    creationPreviewDocument.value = undefined
+    creationPreviewError.value = ''
+    cvUploadRequired.value = true
+    openCvUpload()
+    return
   }
   void prepareCreationSource(source)
 })
 
 watch(selectedCvFile, () => {
   cvUploadError.value = ''
-  selectedCvUploaded.value = false
-  selectedCvSourcePath.value = null
 })
 
 function openCvUpload() {
   selectedCvFile.value = null
   cvUploadError.value = ''
-  selectedCvUploaded.value = false
-  selectedCvSourcePath.value = null
   cvUploadOpen.value = true
 }
 
 function cancelCvUpload() {
   selectedCvFile.value = null
   cvUploadError.value = ''
-  selectedCvUploaded.value = false
-  selectedCvSourcePath.value = null
   cvUploadOpen.value = false
+  creationSource.value = 'blank'
 }
 
 function formatFileSize(bytes: number) {
@@ -145,14 +145,8 @@ async function uploadCvAndContinue() {
   const file = selectedCvFile.value
   cvUploadError.value = ''
   try {
-    if (!selectedCvUploaded.value) {
-      cvUploadStage.value = 'uploading'
-      const profileCv = await store.uploadProfileCv(file)
-      selectedCvUploaded.value = true
-      selectedCvSourcePath.value = profileCv.uploaded ? profileCv.path : null
-    }
     cvUploadStage.value = 'parsing'
-    const imported = await prepareCreationSource('cv', file, selectedCvSourcePath.value)
+    const imported = await prepareCreationSource('cv', file)
     if (!imported) {
       cvUploadOpen.value = true
       cvUploadError.value = creationPreviewError.value || 'The CV contents could not be read.'
@@ -161,14 +155,20 @@ async function uploadCvAndContinue() {
 
     cvUploadOpen.value = false
     selectedCvFile.value = null
-    selectedCvUploaded.value = false
-    selectedCvSourcePath.value = null
     toast.add({ title: 'CV ready', description: 'Your PDF content is ready to review.', color: 'success', icon: 'i-lucide-check-circle' })
   } catch (error: any) {
-    cvUploadError.value = error.data?.statusMessage || error.message || 'Could not upload your CV.'
+    cvUploadError.value = error.data?.statusMessage || error.message || 'Could not import your CV.'
   } finally {
     cvUploadStage.value = 'idle'
   }
+}
+
+function openCreate() {
+  if (billing.status && !billing.status.canCreateResume) {
+    toast.add({ title: 'Resume limit reached', description: `Your ${billing.status.plan} plan allows ${billing.status.resumeLimit} resumes.`, color: 'warning', icon: 'i-lucide-lock' })
+    return
+  }
+  createOpen.value = true
 }
 
 function formatUpdated(value: string) {
@@ -183,6 +183,7 @@ async function createDraft() {
       ? { document: preparedCreation.value.document, sourceCvPath: preparedCreation.value.sourceCvPath }
       : undefined
     const resume = await store.createResume(newName.value, creationSource.value, templateKey.value, prepared)
+    await billing.fetchStatus().catch(() => undefined)
     createOpen.value = false
     await router.push(`/resumes/${resume.id}`)
   } catch (error: any) {
@@ -230,6 +231,7 @@ async function deleteDraft() {
   workingId.value = selected.value.id
   try {
     await store.deleteResume(selected.value.id)
+    await billing.fetchStatus().catch(() => undefined)
     deleteOpen.value = false
     toast.add({ title: 'Resume deleted', color: 'success', icon: 'i-lucide-check-circle' })
   } catch (error: any) {
@@ -257,7 +259,11 @@ async function deleteDraft() {
           <h2 class="text-xl font-semibold text-highlighted">Your resumes</h2>
           <p class="text-sm text-muted">Each draft is private and saved independently.</p>
         </div>
-        <UButton label="New resume" icon="i-lucide-plus" @click="createOpen = true" />
+        <div class="flex flex-wrap items-center gap-2">
+          <UBadge v-if="billing.status" color="neutral" variant="subtle" :label="`${billing.status.plan === 'premium' ? 'Premium' : 'Free'} · ${billing.status.resumeCount}/${billing.status.resumeLimit} resumes · ${billing.status.credits.total} AI credits`" />
+          <UButton to="/billing" label="Plan" color="neutral" variant="outline" icon="i-lucide-credit-card" />
+          <UButton label="New resume" icon="i-lucide-plus" :disabled="billing.status ? !billing.status.canCreateResume : false" @click="openCreate" />
+        </div>
       </div>
 
       <UAlert v-if="store.errorMessage" color="error" icon="i-lucide-triangle-alert" :title="store.errorMessage" />
@@ -268,9 +274,9 @@ async function deleteDraft() {
         <div class="py-10 text-center">
           <UIcon name="i-lucide-file-plus-2" class="mx-auto size-11 text-muted" />
           <h3 class="mt-3 font-semibold text-highlighted">Create your first targeted resume</h3>
-          <p class="mx-auto mt-1 max-w-md text-sm text-muted">Start from your profile, import your uploaded CV, or begin
+          <p class="mx-auto mt-1 max-w-md text-sm text-muted">Start from your profile, import a PDF resume, or begin
             with a clean page.</p>
-          <UButton class="mt-5" label="Create resume" icon="i-lucide-plus" @click="createOpen = true" />
+          <UButton class="mt-5" label="Create resume" icon="i-lucide-plus" @click="openCreate" />
         </div>
       </UCard>
       <div v-else class="grid gap-4 md:grid-cols-2">
@@ -326,7 +332,7 @@ async function deleteDraft() {
 
           <div v-if="creationSource === 'cv' && cvUploadOpen" class="space-y-4">
             <UFileUpload v-model="selectedCvFile" accept="application/pdf,.pdf" label="Choose a PDF CV"
-              description="Select the correct file, review it, then upload. PDF only, up to 10 MB."
+              description="Select a text-based PDF to import. PDF only, up to 10 MB."
               icon="i-lucide-cloud-upload" :preview="false" :disabled="uploadingCv" class="w-full" />
             <div v-if="selectedCvFile"
               class="flex flex-col gap-3 rounded-lg border border-default bg-elevated p-3 sm:flex-row sm:items-center">
@@ -352,7 +358,7 @@ async function deleteDraft() {
             <div class="flex w-full flex-wrap justify-end gap-2">
               <UButton label="Cancel" color="neutral" variant="outline" :disabled="uploadingCv"
                 @click="cancelCvUpload" />
-              <UButton :label="cvUploadButtonLabel" icon="i-lucide-upload" :loading="uploadingCv"
+              <UButton :label="uploadingCv ? cvUploadButtonLabel : 'Import CV'" icon="i-lucide-file-input" :loading="uploadingCv"
                 :disabled="!selectedCvFile || uploadingCv" @click="uploadCvAndContinue" />
             </div>
           </div>

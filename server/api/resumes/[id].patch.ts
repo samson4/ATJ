@@ -1,11 +1,11 @@
 import { resumeSaveRequestSchema } from '~~/shared/schemas/resume'
-import { requireResumeBetaUser } from '../../utils/resumeAuth'
+import { requireResumeUser } from '../../utils/resumeAuth'
 
 export default defineEventHandler(async (event) => {
   const resumeId = getRouterParam(event, 'id')
   if (!resumeId) throw createError({ statusCode: 400, statusMessage: 'Missing resume ID' })
 
-  const { supabase, user } = await requireResumeBetaUser(event)
+  const { supabase, user } = await requireResumeUser(event)
   const parsed = resumeSaveRequestSchema.safeParse(await readBody(event))
   if (!parsed.success) {
     throw createError({ statusCode: 422, statusMessage: 'The resume contains invalid data and could not be saved' })

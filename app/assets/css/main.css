@@ -14,10 +14,24 @@
 }
 
 .dark {
-  --ui-bg: rgb(15, 23, 42);
-  --ui-bg-muted: var(--ui-color-neutral-800);
-  --ui-bg-elevated: var(--ui-color-neutral-800);
-  --ui-bg-accented: var(--ui-color-neutral-700);
-  --ui-bg-inverted: white;
+  --ui-primary: rgb(251, 146, 60);
+
+  --ui-text-dimmed: rgb(113, 113, 122);
+  --ui-text-muted: rgb(161, 161, 170);
+  --ui-text-toned: rgb(212, 212, 216);
+  --ui-text: rgb(229, 231, 235);
+  --ui-text-highlighted: rgb(250, 250, 250);
+  --ui-text-inverted: rgb(15, 16, 18);
+
+  --ui-bg: rgb(15, 16, 18);
+  --ui-bg-muted: rgb(22, 23, 26);
+  --ui-bg-elevated: rgb(29, 30, 34);
+  --ui-bg-accented: rgb(39, 41, 46);
+  --ui-bg-inverted: rgb(250, 250, 250);
+
+  --ui-border: rgb(44, 46, 52);
+  --ui-border-muted: rgb(55, 57, 64);
+  --ui-border-accented: rgb(72, 74, 82);
+  --ui-border-inverted: rgb(250, 250, 250);
 }
 

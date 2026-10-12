@@ -16,11 +16,13 @@ type JobState = {
   jobList: JobRecord[]
   savedJobIds: string[]
   savedJobs: JobRecord[]
+  savedJobsTotal: number
   loadingSavedJobIds: boolean
   loadingSavedJobs: boolean
   savingJobIds: string[]
   appliedJobIds: string[]
   appliedJobs: JobRecord[]
+  appliedJobsTotal: number
   loadingAppliedJobIds: boolean
   loadingAppliedJobs: boolean
   applyingJobIds: string[]
@@ -52,11 +54,13 @@ export const useJobStore = defineStore('job', {
     jobList: [],
     savedJobIds: [],
     savedJobs: [],
+    savedJobsTotal: 0,
     loadingSavedJobIds: false,
     loadingSavedJobs: false,
     savingJobIds: [],
     appliedJobIds: [],
     appliedJobs: [],
+    appliedJobsTotal: 0,
     loadingAppliedJobIds: false,
     loadingAppliedJobs: false,
     applyingJobIds: [],
@@ -89,6 +93,7 @@ export const useJobStore = defineStore('job', {
     clearSavedJobs() {
       this.savedJobIds = []
       this.savedJobs = []
+      this.savedJobsTotal = 0
       this.savingJobIds = []
       this.loadingSavedJobIds = false
       this.loadingSavedJobs = false
@@ -96,6 +101,7 @@ export const useJobStore = defineStore('job', {
     clearAppliedJobs() {
       this.appliedJobIds = []
       this.appliedJobs = []
+      this.appliedJobsTotal = 0
       this.applyingJobIds = []
       this.removingAppliedJobIds = []
       this.loadingAppliedJobIds = false
@@ -130,7 +136,7 @@ export const useJobStore = defineStore('job', {
         this.loadingSavedJobIds = false
       }
     },
-    async fetchSavedJobs() {
+    async fetchSavedJobs(page = 1, itemsPerPage = 10) {
       this.loadingSavedJobs = true
 
       try {
@@ -142,23 +148,25 @@ export const useJobStore = defineStore('job', {
         }
 
         const { $supabase } = useNuxtApp()
-        const { data, error } = await $supabase
+        const from = (page - 1) * itemsPerPage
+        const to = from + itemsPerPage - 1
+        const { data, error, count } = await $supabase
           .schema('jobs')
           .from('saved_jobs_with_job_info')
-          .select('*')
+          .select('*', { count: 'exact' })
           .eq('user_id', user.id)
           .order('saved_at', { ascending: false })
+          .range(from, to)
 
         if (error) throw error
 
         this.savedJobs = data || []
-        this.savedJobIds = this.savedJobs
-          .map((job: JobRecord) => job.id)
-          .filter(Boolean) as string[]
+        this.savedJobsTotal = count ?? this.savedJobs.length
 
         return this.savedJobs
       } catch {
         this.savedJobs = []
+        this.savedJobsTotal = 0
         return []
       } finally {
         this.loadingSavedJobs = false
@@ -251,6 +259,7 @@ export const useJobStore = defineStore('job', {
 
         this.savedJobIds = this.savedJobIds.filter((id) => id !== jobId)
         this.savedJobs = this.savedJobs.filter((job) => job.id !== jobId)
+        this.savedJobsTotal = Math.max(0, this.savedJobsTotal - 1)
 
         toast.add({
           title: 'Removed from saved jobs',
@@ -306,7 +315,7 @@ export const useJobStore = defineStore('job', {
         this.loadingAppliedJobIds = false
       }
     },
-    async fetchAppliedJobs() {
+    async fetchAppliedJobs(page = 1, itemsPerPage = 10) {
       this.loadingAppliedJobs = true
 
       try {
@@ -318,23 +327,25 @@ export const useJobStore = defineStore('job', {
         }
 
         const { $supabase } = useNuxtApp()
-        const { data, error } = await $supabase
+        const from = (page - 1) * itemsPerPage
+        const to = from + itemsPerPage - 1
+        const { data, error, count } = await $supabase
           .schema('jobs')
           .from('applications_with_job_info')
-          .select('*')
+          .select('*', { count: 'exact' })
           .eq('user_id', user.id)
           .order('applied_at', { ascending: false })
+          .range(from, to)
 
         if (error) throw error
 
         this.appliedJobs = data || []
-        this.appliedJobIds = this.appliedJobs
-          .map((job: JobRecord) => job.id)
-          .filter(Boolean) as string[]
+        this.appliedJobsTotal = count ?? this.appliedJobs.length
 
         return this.appliedJobs
       } catch {
         this.appliedJobs = []
+        this.appliedJobsTotal = 0
         return []
       } finally {
         this.loadingAppliedJobs = false
@@ -425,6 +436,7 @@ export const useJobStore = defineStore('job', {
 
         this.appliedJobIds = this.appliedJobIds.filter((id) => id !== jobId)
         this.appliedJobs = this.appliedJobs.filter((job) => job.id !== jobId)
+        this.appliedJobsTotal = Math.max(0, this.appliedJobsTotal - 1)
 
         toast.add({
           title: 'Application removed',

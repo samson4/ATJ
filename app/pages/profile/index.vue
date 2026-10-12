@@ -426,80 +426,6 @@
                 </UFormField>
               </div>
 
-              <UFormField
-                label="CV"
-                name="cv_file_name"
-                description="Upload a PDF resume. Max size 10MB."
-              >
-                <div class="space-y-3 rounded-lg border border-muted p-4">
-                  <div
-                    v-if="state.cv_file_name"
-                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div class="flex min-w-0 items-center gap-3">
-                      <div class="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                        <UIcon name="i-lucide-file-text" class="size-5" />
-                      </div>
-                      <div class="min-w-0">
-                        <p class="truncate text-sm font-medium text-highlighted">
-                          {{ state.cv_file_name }}
-                        </p>
-                        <p class="text-xs text-muted">
-                          {{ selectedCvFile ? 'Ready to upload when you save.' : 'Stored privately in your account.' }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                      <UButton
-                        v-if="selectedCvFile || state.cv_file_path"
-                        label="View"
-                        icon="i-lucide-external-link"
-                        color="neutral"
-                        variant="outline"
-                        size="sm"
-                        :loading="openingCv"
-                        @click="openCv"
-                      />
-                      <UButton
-                        label="Remove"
-                        icon="i-lucide-trash-2"
-                        color="error"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="saving || deletingCv"
-                        @click="cvDeleteOpen = true"
-                      />
-                    </div>
-                  </div>
-
-                  <div
-                    v-else
-                    class="rounded-md border border-dashed border-muted p-4 text-sm text-muted"
-                  >
-                    No CV uploaded yet.
-                  </div>
-
-                  <div class="flex flex-wrap gap-2">
-                    <UButton
-                      :label="state.cv_file_name ? 'Replace CV' : 'Upload CV'"
-                      icon="i-lucide-cloud-upload"
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                      @click="cvInputRef?.click()"
-                    />
-                    <input
-                      ref="cvInputRef"
-                      type="file"
-                      class="hidden"
-                      accept="application/pdf"
-                      @change="onCvFileChange"
-                    />
-                  </div>
-                </div>
-              </UFormField>
-
             </section>
 
             <section class="space-y-4">
@@ -569,7 +495,7 @@
                 size="lg"
                 icon="i-lucide-check"
                 class="w-full justify-center sm:w-auto"
-                :disabled="!hasChanges || deletingCv"
+                :disabled="!hasChanges"
               />
             </div>
           </UForm>
@@ -577,35 +503,6 @@
       </div>
     </div>
 
-    <UModal
-      v-model:open="cvDeleteOpen"
-      title="Remove CV?"
-      description="This will permanently remove the uploaded CV from your profile."
-    >
-      <template #body>
-        <p class="text-sm text-muted">
-          You will need to upload the PDF again if you want to use it later.
-        </p>
-      </template>
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            variant="outline"
-            :disabled="deletingCv"
-            @click="cvDeleteOpen = false"
-          />
-          <UButton
-            label="Remove CV"
-            icon="i-lucide-trash-2"
-            color="error"
-            :loading="deletingCv"
-            @click="deleteCv"
-          />
-        </div>
-      </template>
-    </UModal>
   </UContainer>
 </template>
 
@@ -669,8 +566,6 @@ const schema = z.object({
   linkedin_url: optionalUrl,
   avatar_file_path: z.string(),
   avatar_file_name: z.string(),
-  cv_file_path: z.string(),
-  cv_file_name: z.string(),
   experience: z.array(z.object({
     title: z.string(),
     company: z.string(),
@@ -711,8 +606,6 @@ const state = reactive<ProfileForm>({
   linkedin_url: '',
   avatar_file_path: '',
   avatar_file_name: '',
-  cv_file_path: '',
-  cv_file_name: '',
   experience: [],
   education: [],
   portfolio_links: []
@@ -720,24 +613,14 @@ const state = reactive<ProfileForm>({
 
 const originalState = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const cvInputRef = ref<HTMLInputElement | null>(null)
 const avatarPreview = ref<string | null>(null)
 const newAvatarFile = ref<File | null>(null)
 const existingAvatarUrl = ref('')
 const existingAvatarPath = ref('')
 const avatarRemoved = ref(false)
-const selectedCvFile = ref<File | null>(null)
-const existingCvPath = ref('')
-const cvRemoved = ref(false)
-const openingCv = ref(false)
-const cvDeleteOpen = ref(false)
-const deletingCv = ref(false)
 const AVATAR_BUCKET = 'profile-images'
-const CV_BUCKET = 'profile-documents'
 const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-const CV_MIME_TYPE = 'application/pdf'
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024
-const MAX_CV_SIZE = 10 * 1024 * 1024
 
 const skillMenuItems = computed<SkillMenuItem[][]>(() =>
   (techSkillsData as SkillGroup[]).map((group) => [
@@ -750,11 +633,9 @@ const skillMenuItems = computed<SkillMenuItem[][]>(() =>
   ])
 )
 const hasPendingAvatarChange = computed(() => !!newAvatarFile.value || avatarRemoved.value)
-const hasPendingCvChange = computed(() => !!selectedCvFile.value || cvRemoved.value)
 const hasChanges = computed(() =>
   serializeState(state) !== originalState.value ||
-  hasPendingAvatarChange.value ||
-  hasPendingCvChange.value
+  hasPendingAvatarChange.value
 )
 const profileCompletionItems = computed<CompletionItem[]>(() => [
   {
@@ -780,10 +661,6 @@ const profileCompletionItems = computed<CompletionItem[]>(() => [
   {
     label: 'Education',
     complete: cleanEducation(state.education).length > 0
-  },
-  {
-    label: 'CV',
-    complete: !!state.cv_file_name || !!state.cv_file_path || !!selectedCvFile.value
   },
   {
     label: 'Links',
@@ -873,8 +750,6 @@ async function fetchProfile() {
       avatar_display_url: data?.avatar_file_path
         ? await createAvatarSignedUrl(data.avatar_file_path)
         : metadata.avatar_url || metadata.picture || '',
-      cv_file_path: data?.cv_file_path || '',
-      cv_file_name: data?.cv_file_name || '',
     })
 
     originalState.value = serializeState(state)
@@ -893,8 +768,7 @@ async function saveProfile(event: FormSubmitEvent<ProfileForm>) {
 
   try {
     const formWithAvatar = await resolveAvatarForSave(event.data)
-    const formWithFiles = await resolveCvForSave(formWithAvatar)
-    const profile = buildProfilePayload(formWithFiles)
+    const profile = buildProfilePayload(formWithAvatar)
 
     const { error } = await $supabase
       .from('profiles')
@@ -919,36 +793,23 @@ async function saveProfile(event: FormSubmitEvent<ProfileForm>) {
     if (metadataError) throw metadataError
 
     const savedAvatarPreview = !!newAvatarFile.value
-    const savedCvFile = !!selectedCvFile.value
-    const removedCvFile = cvRemoved.value
     const previousAvatarPath = existingAvatarPath.value
-    const previousCvPath = existingCvPath.value
-    state.avatar_file_path = formWithFiles.avatar_file_path
-    state.avatar_file_name = formWithFiles.avatar_file_name
-    state.cv_file_path = formWithFiles.cv_file_path
-    state.cv_file_name = formWithFiles.cv_file_name
+    state.avatar_file_path = formWithAvatar.avatar_file_path
+    state.avatar_file_name = formWithAvatar.avatar_file_name
     await removePreviousAvatarIfNeeded(previousAvatarPath, state.avatar_file_path)
-    await removePreviousCvIfNeeded(previousCvPath, state.cv_file_path)
     existingAvatarPath.value = state.avatar_file_path
     existingAvatarUrl.value = state.avatar_file_path
       ? await createAvatarSignedUrl(state.avatar_file_path)
       : ''
-    selectedCvFile.value = null
-    cvRemoved.value = false
-    existingCvPath.value = state.cv_file_path
     avatarPreview.value = null
     newAvatarFile.value = null
     avatarRemoved.value = false
     originalState.value = serializeState(state)
     toast.add({
       title: 'Profile saved',
-      description: savedCvFile
-        ? 'Your CV was uploaded and your profile has been updated.'
-        : removedCvFile
-          ? 'Your CV was removed and your profile has been updated.'
-          : savedAvatarPreview
-            ? 'Your photo was uploaded and your profile has been updated.'
-            : 'Your profile information has been updated.',
+      description: savedAvatarPreview
+        ? 'Your photo was uploaded and your profile has been updated.'
+        : 'Your profile information has been updated.',
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
@@ -978,8 +839,6 @@ function buildProfilePayload(form: ProfileForm) {
     linkedin_url: nullIfBlank(form.linkedin_url),
     avatar_file_path: nullIfBlank(form.avatar_file_path),
     avatar_file_name: nullIfBlank(form.avatar_file_name),
-    cv_file_path: nullIfBlank(form.cv_file_path),
-    cv_file_name: nullIfBlank(form.cv_file_name),
     updated_at: new Date().toISOString()
   }
 }
@@ -996,8 +855,6 @@ function applyProfileToState(profile: {
   avatar_file_path: string
   avatar_file_name: string
   avatar_display_url: string
-  cv_file_path: string
-  cv_file_name: string
 }) {
   state.full_name = profile.full_name
   state.bio = profile.bio
@@ -1007,14 +864,6 @@ function applyProfileToState(profile: {
   state.avatar_file_path = profile.avatar_file_path || ''
   state.avatar_file_name = profile.avatar_file_name || ''
   existingAvatarPath.value = profile.avatar_file_path || ''
-  state.cv_file_path = profile.cv_file_path || ''
-  state.cv_file_name = profile.cv_file_name || ''
-  existingCvPath.value = profile.cv_file_path || ''
-  selectedCvFile.value = null
-  cvRemoved.value = false
-  if (cvInputRef.value) {
-    cvInputRef.value.value = ''
-  }
   existingAvatarUrl.value = profile.avatar_display_url || ''
   avatarPreview.value = null
   newAvatarFile.value = null
@@ -1149,190 +998,6 @@ async function removePreviousAvatarIfNeeded(previousPath: string, nextPath: stri
   }
 }
 
-function onCvFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-
-  if (!file) return
-
-  if ((file.type && file.type !== CV_MIME_TYPE) || !file.name.toLowerCase().endsWith('.pdf')) {
-    errorMessage.value = 'CV must be a PDF file.'
-    input.value = ''
-    toast.add({
-      title: 'Invalid CV file',
-      description: errorMessage.value,
-      color: 'error',
-      icon: 'i-lucide-triangle-alert'
-    })
-    return
-  }
-
-  if (file.size > MAX_CV_SIZE) {
-    errorMessage.value = 'CV must be 10MB or smaller.'
-    input.value = ''
-    toast.add({
-      title: 'CV is too large',
-      description: errorMessage.value,
-      color: 'error',
-      icon: 'i-lucide-triangle-alert'
-    })
-    return
-  }
-
-  errorMessage.value = ''
-  selectedCvFile.value = file
-  cvRemoved.value = false
-  state.cv_file_name = file.name
-}
-
-async function deleteCv() {
-  if (!currentUserId.value || deletingCv.value) return
-
-  deletingCv.value = true
-  errorMessage.value = ''
-  const storedCvPath = existingCvPath.value || state.cv_file_path
-
-  try {
-    const { error } = await $supabase
-      .from('profiles')
-      .update({
-        cv_file_path: null,
-        cv_file_name: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', currentUserId.value)
-
-    if (error) throw error
-
-    selectedCvFile.value = null
-    cvRemoved.value = false
-    state.cv_file_path = ''
-    state.cv_file_name = ''
-    existingCvPath.value = ''
-    if (cvInputRef.value) cvInputRef.value.value = ''
-
-    const original = JSON.parse(originalState.value)
-    original.cv_file_path = ''
-    original.cv_file_name = ''
-    originalState.value = JSON.stringify(original)
-    cvDeleteOpen.value = false
-
-    if (storedCvPath) {
-      const { error: storageError } = await $supabase.storage
-        .from(CV_BUCKET)
-        .remove([storedCvPath])
-
-      if (storageError) {
-        toast.add({
-          title: 'CV removed from profile',
-          description: 'The database was updated, but the old PDF may still need storage cleanup.',
-          color: 'warning',
-          icon: 'i-lucide-info'
-        })
-        return
-      }
-    }
-
-    toast.add({
-      title: 'CV removed',
-      description: 'The uploaded CV was removed from your profile.',
-      color: 'success',
-      icon: 'i-lucide-check-circle'
-    })
-  } catch (error: any) {
-    errorMessage.value = error.message || 'Could not remove your CV.'
-    toast.add({
-      title: 'Could not remove CV',
-      description: errorMessage.value,
-      color: 'error',
-      icon: 'i-lucide-triangle-alert'
-    })
-  } finally {
-    deletingCv.value = false
-  }
-}
-
-async function openCv() {
-  if (selectedCvFile.value) {
-    const url = URL.createObjectURL(selectedCvFile.value)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
-    return
-  }
-
-  if (!state.cv_file_path) return
-
-  openingCv.value = true
-
-  try {
-    const { data, error } = await $supabase.storage
-      .from(CV_BUCKET)
-      .createSignedUrl(state.cv_file_path, 60)
-
-    if (error) throw error
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
-    }
-  } catch (error: any) {
-    toast.add({
-      title: 'Could not open CV',
-      description: error.message || 'Please try again.',
-      color: 'error',
-      icon: 'i-lucide-triangle-alert'
-    })
-  } finally {
-    openingCv.value = false
-  }
-}
-
-async function resolveCvForSave(form: ProfileForm): Promise<ProfileForm> {
-  if (cvRemoved.value) {
-    return {
-      ...form,
-      cv_file_path: '',
-      cv_file_name: ''
-    }
-  }
-
-  if (!selectedCvFile.value) {
-    return form
-  }
-
-  const cvPath = `${currentUserId.value}/cv/${Date.now()}-${sanitizeFileName(selectedCvFile.value.name)}`
-  const { error } = await $supabase.storage
-    .from(CV_BUCKET)
-    .upload(cvPath, selectedCvFile.value, {
-      contentType: CV_MIME_TYPE,
-      upsert: false
-    })
-
-  if (error) throw error
-
-  return {
-    ...form,
-    cv_file_path: cvPath,
-    cv_file_name: selectedCvFile.value.name
-  }
-}
-
-async function removePreviousCvIfNeeded(previousPath: string, nextPath: string) {
-  if (!previousPath || previousPath === nextPath) return
-  if (!selectedCvFile.value && !cvRemoved.value) return
-
-  const { error } = await $supabase.storage
-    .from(CV_BUCKET)
-    .remove([previousPath])
-
-  if (error) {
-    toast.add({
-      title: 'Old CV was not removed',
-      description: 'Your profile was saved, but the previous CV file may still need cleanup later.',
-      color: 'warning',
-      icon: 'i-lucide-info'
-    })
-  }
-}
-
 function addExperience() {
   state.experience.push({
     title: '',
@@ -1392,8 +1057,6 @@ function serializeState(form: ProfileForm) {
     linkedin_url: form.linkedin_url,
     avatar_file_path: form.avatar_file_path,
     avatar_file_name: form.avatar_file_name,
-    cv_file_path: form.cv_file_path,
-    cv_file_name: form.cv_file_name,
     existing_avatar_url: existingAvatarUrl.value,
     experience: cleanExperience(form.experience),
     education: cleanEducation(form.education),
@@ -1488,7 +1151,7 @@ function nullIfBlank(value: string) {
 }
 
 function sanitizeFileName(fileName: string) {
-  const fallbackName = 'cv.pdf'
+  const fallbackName = 'profile.jpg'
   const sanitized = fileName
     .trim()
     .toLowerCase()

@@ -16,8 +16,7 @@ export default defineAppConfig({
     },
     card:{
        slots: {
-        // white background in light mode, elevated background in dark mode
-        root: 'rounded-lg overflow-y-auto shadow-sm bg-white dark:bg-dark-elevated',
+        root: 'rounded-lg overflow-y-auto shadow-sm bg-default',
         header: 'p-4 sm:px-6',
         body: 'p-4 sm:p-6 ',
         footer: 'p-4 sm:px-6 '
@@ -28,7 +27,7 @@ export default defineAppConfig({
             root: 'bg-inverted text-inverted'
           },
           outline: {
-            root: 'dark:bg-ehite dark:text-white ring ring-default'
+            root: 'bg-default text-default ring ring-default'
           },
           soft: {
             root: 'bg-elevated/50 divide-y divide-default'

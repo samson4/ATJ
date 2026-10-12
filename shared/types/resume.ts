@@ -31,5 +31,4 @@ export type CandidateProfile = {
   portfolio_links?: Array<Record<string, unknown>> | null
   github_url?: string | null
   linkedin_url?: string | null
-  cv_file_path?: string | null
 }
