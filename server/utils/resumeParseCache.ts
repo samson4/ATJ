@@ -24,16 +24,22 @@ export interface ResumeParseCacheOptions extends ResumeAiParserOptions {
   parse?: ParseResume
   beforeParse?: () => Promise<void>
   afterParse?: (result: ResumeAiParserResult) => Promise<void>
+  /** Sorted, newline-joined annotation link URLs for the uploaded PDF.
+   *  Two documents with identical text but different embedded links must
+   *  receive separate cache entries. Leave empty when no annotations exist. */
+  annotationLinkFingerprint?: string
 }
 
 const inFlightParses = new Map<string, Promise<ResumeAiParserResult>>()
 
-export function createResumeParseInputHash(rawText: string, fallbackEmail = '') {
+export function createResumeParseInputHash(rawText: string, fallbackEmail = '', annotationLinkFingerprint = '') {
   return createHash('sha256')
     .update('resume-text\0')
     .update(rawText)
     .update('\0fallback-email\0')
     .update(fallbackEmail.trim().toLocaleLowerCase('en'))
+    .update('\0annotation-links\0')
+    .update(annotationLinkFingerprint)
     .digest('hex')
 }
 
@@ -126,7 +132,7 @@ export async function parseResumeWithCache(
   options: ResumeParseCacheOptions
 ): Promise<ResumeAiParserResult> {
   const model = normalizedModel(options.model)
-  const inputHash = createResumeParseInputHash(rawText, options.fallbackEmail)
+  const inputHash = createResumeParseInputHash(rawText, options.fallbackEmail, options.annotationLinkFingerprint)
   const cacheKey = `${options.userId}:${inputHash}:${RESUME_AI_PARSER_VERSION}:${model}`
   const active = inFlightParses.get(cacheKey)
   if (active) return active

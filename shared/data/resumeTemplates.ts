@@ -6,7 +6,10 @@ export const resumeTemplateKeySchema = z.enum([
   'centered-professional',
   'executive',
   'compact',
-  'structured'
+  'structured',
+  'editorial-air',
+  'career-ledger',
+  'resume-no'
 ])
 
 export type ResumeTemplateKey = z.output<typeof resumeTemplateKeySchema>
@@ -54,6 +57,24 @@ export const resumeTemplates = [
     name: 'Structured',
     description: 'A precise resume with outlined section labels and clear row separators.',
     order: 6
+  },
+  {
+    key: 'editorial-air',
+    name: 'Editorial Air',
+    description: 'A spacious, left-aligned layout with generous breathing room and a clear editorial hierarchy.',
+    order: 7
+  },
+  {
+    key: 'career-ledger',
+    name: 'Career Ledger',
+    description: 'A structured, scan-friendly design with right-aligned metadata and subtle dividers between entries.',
+    order: 8
+  },
+  {
+    key: 'resume-no',
+    name: 'Resume NO',
+    description: 'A clean grayscale layout with a centered header, compact contact links, fine section rules, and neatly spaced experience details.',
+    order: 9
   }
 ] as const satisfies readonly ResumeTemplateDefinition[]
 

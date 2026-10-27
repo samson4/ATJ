@@ -9,7 +9,12 @@ const sectionTitles: Record<ResumeSectionKey, string> = {
   projects: 'Projects', certifications: 'Certifications', languages: 'Languages', links: 'Links'
 }
 
-type TemplateStyle = 'classic' | 'minimal' | 'centered' | 'executive' | 'compact' | 'structured'
+const resumeNoSectionTitles: Partial<Record<ResumeSectionKey, string>> = {
+  summary: 'Summary',
+  projects: 'Personal Projects'
+}
+
+type TemplateStyle = 'classic' | 'minimal' | 'centered' | 'executive' | 'compact' | 'structured' | 'editor' | 'career' | 'resume-no'
 
 export type ResumeTemplateLayout = {
   pageMargin: number
@@ -55,6 +60,47 @@ export const resumeTemplateLayouts: Record<ResumeTemplateKey, ResumeTemplateLayo
     pageMargin: 44, bodySize: 8.8, rowTitleSize: 10, nameSize: 22, headlineSize: 10.5,
     detailsIndent: 8, richLineGap: 1, rowGap: 0.4, style: 'structured',
     contactSeparator: '  •  ', metaAlign: 'left'
+  },
+  'editorial-air': {
+    pageMargin: 58,
+    bodySize: 9.25,
+    rowTitleSize: 10.6,
+    nameSize: 30,
+    headlineSize: 11,
+    detailsIndent: 0,
+    richLineGap: 1.4,
+    rowGap: 0.7,
+    style: 'editor',
+    contactSeparator: '   /   ',
+    metaAlign: 'left'
+  },
+
+  'career-ledger': {
+    pageMargin: 40,
+    bodySize: 9.1,
+    rowTitleSize: 10.8,
+    nameSize: 23,
+    headlineSize: 10,
+    detailsIndent: 12,
+    richLineGap: 1.15,
+    rowGap: 0.5,
+    style: 'career',
+    contactSeparator: '   ·   ',
+    metaAlign: 'right'
+  },
+
+  'resume-no': {
+    pageMargin: 36,
+    bodySize: 9.25,
+    rowTitleSize: 10,
+    nameSize: 16,
+    headlineSize: 10.5,
+    detailsIndent: 17,
+    richLineGap: 1.5,
+    rowGap: 0.42,
+    style: 'resume-no',
+    contactSeparator: '  |  ',
+    metaAlign: 'left'
   }
 }
 
@@ -128,6 +174,17 @@ function richTextSegments(content: string) {
 export async function renderResumePdf(document: ResumeDocument, templateKey: ResumeTemplateKey): Promise<Buffer> {
   const layout = resumeTemplateLayouts[templateKey]
   if (!layout) throw new Error(`Unsupported resume template: ${templateKey}`)
+  const numericLayoutKeys: Array<keyof Pick<ResumeTemplateLayout,
+    'pageMargin' | 'bodySize' | 'rowTitleSize' | 'nameSize' | 'headlineSize' | 'detailsIndent' | 'richLineGap' | 'rowGap'
+  >> = ['pageMargin', 'bodySize', 'rowTitleSize', 'nameSize', 'headlineSize', 'detailsIndent', 'richLineGap', 'rowGap']
+  const invalidLayoutKeys = numericLayoutKeys.filter(key => !Number.isFinite(layout[key]))
+  if (invalidLayoutKeys.length) {
+    throw new Error(`Invalid numeric layout value(s) for ${templateKey}: ${invalidLayoutKeys.join(', ')}`)
+  }
+  const isResumeNo = layout.style === 'resume-no'
+  const inkColor = isResumeNo ? '#252525' : TEXT_COLOR
+  const mutedColor = isResumeNo ? '#555555' : TEXT_COLOR
+  const ruleColor = isResumeNo ? '#B8B8B8' : TEXT_COLOR
 
   const fontStorage = useStorage('assets:resume-fonts')
   const [latinFont, latinBoldFont, ethiopicFont, ethiopicBoldFont] = await Promise.all([
@@ -167,13 +224,12 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
     font(value, bold)
     pdf.text(value, options)
   }
-  const drawRule = (y: number, start = contentLeft(), end = contentRight(), width = 0.7) => {
-    pdf.strokeColor(TEXT_COLOR).lineWidth(width).moveTo(start, y).lineTo(end, y).stroke()
+  const drawRule = (y: number, start = contentLeft(), end = contentRight(), width = 0.7, color = TEXT_COLOR) => {
+    pdf.strokeColor(color).lineWidth(width).moveTo(start, y).lineTo(end, y).stroke()
   }
-  const drawRichText = (content: string, indent = layout.detailsIndent) => {
-    const segments = richTextSegments(content)
+  const drawRichSegments = (segments: RichTextSegment[], indent = layout.detailsIndent) => {
     if (!segments.length) return
-    pdf.fontSize(layout.bodySize).fillColor(TEXT_COLOR)
+    pdf.fontSize(layout.bodySize).fillColor(inkColor)
     segments.forEach((segment, index) => {
       font(segment.text, segment.bold)
       pdf.text(segment.text, index === 0 ? {
@@ -186,10 +242,98 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
       })
     })
   }
+  const drawResumeNoListItem = (content: string, marker: string, indent: number) => {
+    const segments = richTextSegments(content)
+    if (!segments.length) return
+
+    const markerX = contentLeft() + indent
+    pdf.fontSize(layout.bodySize)
+    font(marker || '•')
+    const markerWidth = marker ? pdf.widthOfString(marker) : layout.bodySize * 0.65
+    const textX = markerX + markerWidth + 6
+    const textWidth = Math.max(1, contentRight() - textX)
+    const plainText = segments.map(segment => segment.text).join('')
+    pdf.fontSize(layout.bodySize)
+    font(plainText)
+    const estimatedHeight = pdf.heightOfString(plainText, {
+      width: textWidth,
+      lineGap: layout.richLineGap
+    }) + 4
+    ensureSpace(estimatedHeight)
+
+    const startY = pdf.y
+    if (/^\d+\.$/.test(marker)) {
+      pdf.fontSize(layout.bodySize).fillColor(inkColor)
+      font(marker)
+      pdf.text(marker, markerX, startY, { lineBreak: false })
+    } else {
+      pdf.circle(markerX + 2, startY + layout.bodySize * 0.55, 1.25).fill(inkColor)
+    }
+
+    pdf.fontSize(layout.bodySize).fillColor(inkColor)
+    segments.forEach((segment, index) => {
+      font(segment.text, segment.bold)
+      const options = {
+        oblique: segment.oblique,
+        underline: segment.underline,
+        strike: segment.strike,
+        continued: index < segments.length - 1
+      }
+
+      if (index === 0) {
+        pdf.text(segment.text, textX, startY, {
+          ...options,
+          width: textWidth,
+          lineGap: layout.richLineGap
+        })
+      } else {
+        pdf.text(segment.text, options)
+      }
+    })
+
+    pdf.x = contentLeft()
+    pdf.moveDown(0.12)
+  }
+  const drawRichText = (content: string, indent = layout.detailsIndent) => {
+    if (layout.style !== 'resume-no') {
+      drawRichSegments(richTextSegments(content), indent)
+      return
+    }
+
+    const sanitized = sanitizeRichText(content)
+    const listPattern = /<(ul|ol)>([\s\S]*?)<\/\1>/gi
+    let cursor = 0
+    let match: RegExpExecArray | null
+
+    while ((match = listPattern.exec(sanitized))) {
+      const precedingText = sanitized.slice(cursor, match.index)
+      if (precedingText) drawRichSegments(richTextSegments(precedingText), indent)
+
+      const ordered = match[1]?.toLowerCase() === 'ol'
+      const itemPattern = /<li>([\s\S]*?)<\/li>/gi
+      let itemMatch: RegExpExecArray | null
+      let itemNumber = 0
+      while ((itemMatch = itemPattern.exec(match[2] || ''))) {
+        itemNumber += 1
+        const marker = ordered ? `${itemNumber}.` : ''
+        drawResumeNoListItem(itemMatch[1] || '', marker, indent)
+      }
+
+      cursor = listPattern.lastIndex
+    }
+
+    const remainingText = sanitized.slice(cursor)
+    if (remainingText) drawRichSegments(richTextSegments(remainingText), indent)
+  }
 
   const heading = (label: string) => {
-    ensureSpace(layout.style === 'structured' ? 46 : 38)
-    pdf.fillColor(TEXT_COLOR)
+    const headingSpace = layout.style === 'structured' || layout.style === 'career'
+      ? 46
+      : layout.style === 'editor'
+        ? 42
+        : 38
+    ensureSpace(headingSpace)
+    pdf.fillColor(inkColor)
     if (layout.style === 'classic') {
       pdf.moveDown(0.75).fontSize(layout.rowTitleSize)
       text(label.toUpperCase(), { characterSpacing: 1 }, true)
@@ -223,6 +367,29 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
       text(label.toUpperCase(), { characterSpacing: 0.7 }, true)
       drawRule(pdf.y - 1, contentLeft(), contentLeft() + pdf.widthOfString(label.toUpperCase()), 0.8)
       pdf.moveDown(0.18)
+    } else if (layout.style === 'resume-no') {
+      pdf.moveDown(0.55).fontSize(layout.rowTitleSize).fillColor(inkColor)
+      text(label.toUpperCase(), { characterSpacing: 0.35 }, true)
+      pdf.moveDown(0.2)
+      drawRule(pdf.y, contentLeft(), contentRight(), 0.55, ruleColor)
+      pdf.moveDown(0.3)
+    } else if (layout.style === 'editor') {
+      pdf.moveDown(1.05).fontSize(layout.rowTitleSize)
+      const headingLabel = label.toUpperCase()
+      const headingY = pdf.y
+      text(headingLabel, { characterSpacing: 1.05 }, true)
+      const labelWidth = pdf.widthOfString(headingLabel, { characterSpacing: 1.05 })
+      const ruleStart = contentLeft() + labelWidth + 12
+      if (ruleStart < contentRight() - 12) {
+        drawRule(headingY + layout.rowTitleSize * 0.65, ruleStart, contentRight(), 0.45)
+      }
+      pdf.moveDown(0.55)
+    } else if (layout.style === 'career') {
+      pdf.moveDown(0.85).fontSize(layout.rowTitleSize)
+      text(label.toUpperCase(), { align: 'right', characterSpacing: 1.1 }, true)
+      pdf.moveDown(0.25)
+      drawRule(pdf.y, contentLeft(), contentRight(), 0.7)
+      pdf.moveDown(0.35)
     } else {
       pdf.moveDown(0.75)
       const top = pdf.y
@@ -237,8 +404,11 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
   }
 
   const row = (primary: string, secondary: string, meta: string, details = '') => {
-    ensureSpace(details ? 54 : 32)
-    pdf.fontSize(layout.rowTitleSize).fillColor(TEXT_COLOR)
+    const estimatedHeight = details
+      ? (layout.style === 'career' ? 64 : layout.style === 'resume-no' ? 62 : 54)
+      : (layout.style === 'career' ? 42 : layout.style === 'resume-no' ? 40 : 32)
+    ensureSpace(estimatedHeight)
+    pdf.fontSize(layout.rowTitleSize).fillColor(inkColor)
     if (layout.style === 'executive' && meta) {
       const top = pdf.y
       pdf.fontSize(layout.bodySize)
@@ -271,11 +441,68 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
       })
       pdf.y = Math.max(titleBottom, pdf.y)
       pdf.x = contentLeft()
+    } else if (layout.style === 'resume-no') {
+      const inlineLabel = Boolean(primary && secondary && !meta && !details)
+      if (inlineLabel) {
+        text(primary, { continued: true }, true)
+        pdf.fontSize(layout.bodySize).fillColor(inkColor)
+        text(`: ${secondary}`)
+      } else {
+        if (primary && secondary) {
+          text(primary, { continued: true }, true)
+          text(`  —  ${secondary}`, {}, true)
+        } else {
+          text(primary || secondary, {}, true)
+        }
+
+        if (meta) {
+          for (const line of meta.split(/\r?\n/).map(value => value.trim()).filter(Boolean)) {
+            pdf.moveDown(0.08).fontSize(layout.bodySize).fillColor(mutedColor)
+            text(line, { oblique: true })
+          }
+          pdf.fillColor(inkColor)
+        }
+      }
+    } else if (layout.style === 'career') {
+      const top = pdf.y
+      const hasMeta = Boolean(meta)
+      const columnGap = 14
+      if (hasMeta) {
+        pdf.fontSize(layout.bodySize)
+        font(meta)
+      }
+      const metaWidth = hasMeta
+        ? Math.min(contentWidth() * 0.38, Math.max(contentWidth() * 0.28, pdf.widthOfString(meta) + 4))
+        : 0
+      const titleWidth = contentWidth() - (hasMeta ? metaWidth + columnGap : 0)
+      const title = primary || secondary
+
+      pdf.fontSize(layout.rowTitleSize)
+      text(title, { width: titleWidth }, true)
+      if (primary && secondary) {
+        pdf.fontSize(layout.bodySize)
+        text(secondary, { width: titleWidth })
+      }
+      const titleBottom = pdf.y
+
+      if (hasMeta) {
+        pdf.fontSize(layout.bodySize)
+        font(meta)
+        pdf.text(meta, contentLeft() + titleWidth + columnGap, top, {
+          width: metaWidth,
+          align: 'right',
+          oblique: true
+        })
+      }
+
+      pdf.y = Math.max(titleBottom, pdf.y)
+      pdf.x = contentLeft()
     } else {
       text(primary || secondary, { continued: Boolean(primary && secondary) }, true)
       if (primary && secondary) {
         pdf.fontSize(layout.bodySize)
-        text(layout.style === 'minimal' ? `  —  ${secondary}` : `  |  ${secondary}`)
+        const separator = layout.style === 'minimal' || layout.style === 'editor' ? '  —  ' : '  |  '
+        text(`${separator}${secondary}`)
       }
       if (meta) {
         pdf.fontSize(layout.bodySize).fillColor(TEXT_COLOR)
@@ -286,13 +513,97 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
     if (layout.style === 'structured') {
       pdf.moveDown(0.25)
       drawRule(pdf.y, contentLeft(), contentRight(), 0.35)
+    } else if (layout.style === 'career') {
+      pdf.moveDown(0.2)
+      drawRule(pdf.y, contentLeft(), contentRight(), 0.3)
     }
     pdf.moveDown(layout.rowGap)
   }
 
+  const safePdfLink = (rawUrl: string) => {
+    let candidate = rawUrl.trim().replace(/[),.;]+$/g, '')
+    if (!candidate) return undefined
+    if (/^www\./i.test(candidate) || /^[\w.-]+\.[a-z]{2,}(?:\/|$)/i.test(candidate)) {
+      candidate = `https://${candidate}`
+    }
+    try {
+      const parsed = new URL(candidate)
+      return ['http:', 'https:', 'mailto:'].includes(parsed.protocol) ? parsed.toString() : undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  const drawHeaderLinks = () => {
+    const links = document.links
+      .map(item => ({
+        label: typeof item.label === 'string' ? item.label.trim() : '',
+        url: typeof item.url === 'string' ? safePdfLink(item.url) : undefined
+      }))
+      .filter(item => item.label)
+    if (!links.length) return
+
+    const separator = '   |   '
+    pdf.font('Noto').fontSize(layout.bodySize)
+    const measureText = (value: string) => {
+      const measured = pdf.widthOfString(value)
+      return Number.isFinite(measured) && measured >= 0
+        ? measured
+        : Array.from(value).length * layout.bodySize * 0.52
+    }
+    const totalWidth = links.reduce((width, item, index) => {
+      return width + measureText(item.label) + (index < links.length - 1 ? measureText(separator) : 0)
+    }, 0)
+    const availableWidth = contentWidth()
+    const left = contentLeft()
+    const y = pdf.y
+    let x = left + Math.max(0, (availableWidth - totalWidth) / 2)
+    if (![totalWidth, availableWidth, left, y, x].every(Number.isFinite)) {
+      throw new Error('Invalid PDF layout coordinates while drawing resume header links')
+    }
+
+    pdf.fillColor(mutedColor)
+    links.forEach((item, index) => {
+      const width = measureText(item.label)
+      pdf.text(item.label, x, y, {
+        lineBreak: false
+      })
+      // PDFKit's underline text option can generate a NaN line segment with
+      // the registered WOFF fonts. Draw the underline explicitly instead.
+      if (item.url && width > 0) {
+        const underlineY = y + layout.bodySize + 1
+        if ([x, underlineY, width].every(Number.isFinite)) {
+          drawRule(underlineY, x, x + width, 0.45, mutedColor)
+        }
+      }
+      // Avoid PDFKit's inferred link rectangle for positioned text; use an
+      // explicit finite annotation rectangle.
+      if (item.url && width > 0) {
+        const linkX = x
+        const linkY = y - 1
+        const linkWidth = Math.max(width, 1)
+        const linkHeight = Math.max(layout.bodySize + 4, 12)
+        if ([linkX, linkY, linkWidth, linkHeight].every(Number.isFinite)) {
+          pdf.link(linkX, linkY, linkWidth, linkHeight, item.url)
+        }
+      }
+      x += width
+      if (index < links.length - 1) {
+        pdf.text(separator, x, y, { lineBreak: false })
+        x += measureText(separator)
+      }
+    })
+
+    pdf.x = contentLeft()
+    pdf.y = y + layout.bodySize + 4
+  }
+
   const basics = document.basics
-  const contact = [basics.email, basics.phone, basics.location].filter(Boolean).join(layout.contactSeparator)
-  pdf.fillColor(TEXT_COLOR)
+  const contactItems = isResumeNo
+    ? [basics.location, basics.phone, basics.email]
+    : [basics.email, basics.phone, basics.location]
+  const contact = contactItems.filter(Boolean).join(layout.contactSeparator)
+  pdf.fillColor(inkColor)
   if (layout.style === 'centered') {
     pdf.fontSize(layout.nameSize)
     text(basics.fullName || 'Your Name', { align: 'center' }, true)
@@ -319,6 +630,52 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
     drawRule(pdf.y, contentLeft(), contentRight(), 1.2)
     drawRule(pdf.y + 3, contentLeft(), contentRight(), 0.4)
     pdf.y += 5
+  } else if (layout.style === 'editor') {
+    pdf.fontSize(layout.nameSize)
+    text(basics.fullName || 'Your Name', {}, true)
+    if (basics.headline) {
+      pdf.moveDown(0.12).fontSize(layout.headlineSize)
+      text(basics.headline)
+    }
+    if (contact) {
+      pdf.moveDown(0.35).fontSize(layout.bodySize)
+      text(contact)
+    }
+    pdf.moveDown(0.65)
+    drawRule(pdf.y, contentLeft(), contentRight(), 0.45)
+    pdf.moveDown(0.35)
+  } else if (layout.style === 'career') {
+    pdf.fontSize(layout.nameSize)
+    text(basics.fullName || 'Your Name', {}, true)
+    if (basics.headline) {
+      pdf.moveDown(0.12).fontSize(layout.headlineSize)
+      text(basics.headline)
+    }
+    if (contact) {
+      pdf.moveDown(0.4).fontSize(layout.bodySize)
+      text(contact, { align: 'right' })
+    }
+    pdf.moveDown(0.45)
+    drawRule(pdf.y, contentLeft(), contentRight(), 0.8)
+    pdf.moveDown(0.35)
+  } else if (layout.style === 'resume-no') {
+    pdf.fontSize(layout.nameSize).fillColor(inkColor)
+    text(basics.fullName || 'Your Name', { align: 'center' }, true)
+    if (basics.headline) {
+      pdf.moveDown(0.12).fontSize(layout.headlineSize)
+      text(basics.headline, { align: 'center' })
+    }
+    if (contact) {
+      pdf.moveDown(0.18).fontSize(layout.bodySize).fillColor(mutedColor)
+      text(contact, { align: 'center' })
+    }
+    if (document.links.length) {
+      pdf.moveDown(0.12)
+      drawHeaderLinks()
+    }
+    pdf.moveDown(0.55)
+    drawRule(pdf.y, contentLeft(), contentRight(), 0.75, ruleColor)
+    pdf.moveDown(0.4)
   } else {
     pdf.fontSize(layout.nameSize)
     text(basics.fullName || 'Your Name', {}, true)
@@ -337,34 +694,57 @@ export async function renderResumePdf(document: ResumeDocument, templateKey: Res
   }
 
   for (const section of document.sectionOrder) {
+    if (layout.style === 'resume-no' && section === 'links') continue
     if (!resumeHasSectionContent(document, section)) continue
     if (section === 'summary') {
-      heading(sectionTitles[section])
-      drawRichText(basics.summary, layout.style === 'minimal' ? 0 : layout.detailsIndent)
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
+      drawRichText(basics.summary, layout.style === 'minimal' || layout.style === 'resume-no' ? 0 : layout.detailsIndent)
     } else if (section === 'experience') {
-      heading(sectionTitles[section])
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
       document.experience.forEach(item => row(
         item.title, item.company,
-        [item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' • '),
+        layout.style === 'resume-no'
+          ? [formatResumeDateRange(item.startDate, item.endDate, item.current), item.location].filter(Boolean).join('\n')
+          : [item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' • '),
         item.bullets
       ))
     } else if (section === 'education') {
       const details = (item: ResumeDocument['education'][number]) => [item.field !== item.degree ? item.field : '', item.location, formatResumeDateRange(item.startDate, item.endDate, item.current)].filter(Boolean).join(' • ')
-      heading(sectionTitles[section])
-      document.education.forEach(item => row(item.degree || item.field, item.institution, details(item)))
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
+      document.education.forEach(item => {
+        if (layout.style === 'resume-no') {
+          const qualification = item.degree || item.field
+          const institution = [item.institution, item.location].filter(Boolean).join(', ')
+          const educationLine = [qualification, item.field && item.field !== qualification ? item.field : '', institution]
+            .filter(Boolean)
+            .join(' — ')
+          ensureSpace(34)
+          pdf.fontSize(layout.bodySize).fillColor(inkColor)
+          text(educationLine)
+          const dateRange = formatResumeDateRange(item.startDate, item.endDate, item.current)
+          if (dateRange) {
+            pdf.fontSize(layout.bodySize).fillColor(mutedColor)
+            text(dateRange)
+            pdf.fillColor(inkColor)
+          }
+          pdf.moveDown(layout.rowGap)
+        } else {
+          row(item.degree || item.field, item.institution, details(item))
+        }
+      })
     } else if (section === 'skills') {
-      heading(sectionTitles[section])
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
       document.skillGroups.forEach(item => row(item.name, item.items.join(', '), ''))
     } else if (section === 'projects') {
       const meta = (item: ResumeDocument['projects'][number]) => [item.url, formatResumeDateRange(item.startDate, item.endDate)].filter(Boolean).join(' • ')
-      heading(sectionTitles[section])
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
       document.projects.forEach(item => row(item.name, item.role, meta(item), item.bullets))
     } else if (section === 'certifications') {
       const meta = (item: ResumeDocument['certifications'][number]) => [formatResumeDate(item.issueDate), item.credentialUrl].filter(Boolean).join(' • ')
-      heading(sectionTitles[section])
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
       document.certifications.forEach(item => row(item.name, item.issuer, meta(item)))
     } else if (section === 'languages') {
-      heading(sectionTitles[section])
+      heading(layout.style === 'resume-no' ? (resumeNoSectionTitles[section] || sectionTitles[section]) : sectionTitles[section])
       document.languages.forEach(item => row(item.name, item.proficiency, ''))
     } else if (section === 'links') {
       heading(sectionTitles[section])

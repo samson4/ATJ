@@ -9,7 +9,7 @@
       </p>
     </div>
 
-    <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+   <div class="mx-auto grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-3">
       <div class="lg:col-span-1">
         <ProfileSidebar active="savedJobs" />
       </div>

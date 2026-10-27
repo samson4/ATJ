@@ -16,7 +16,7 @@ const sectionAliases: Array<[RegExp, ResumeSectionKey]> = [
 // PDF text while still covering the practical maximum email lengths.
 const emailPattern = /[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]{1,253}\.[A-Z]{2,63}/i
 const phonePattern = /(?:\+?\d[\d\s().-]{7,}\d)/
-const urlPattern = /https?:\/\/[^\s]+|(?:www\.)[^\s]+/i
+const urlPattern = /(?:https?:\/\/|(?:www\.))[^\s<>"',)\]]+/i
 const dateRangePattern = /(.{0,30}?)(?:\s+[-–—]\s+)(present|current|now|.{1,30})$/i
 
 function cleanLine(line: string) {
@@ -140,12 +140,55 @@ export function parseResumeText(rawText: string, fallbackEmail = ''): {
     return { id: createResumeItemId(), name, proficiency }
   })
 
-  const urls = Array.from(new Set(allText.match(new RegExp(urlPattern.source, 'gi')) || []))
-  document.links = urls.slice(0, 30).map((url) => ({
-    id: createResumeItemId(),
-    label: /linkedin/i.test(url) ? 'LinkedIn' : /github/i.test(url) ? 'GitHub' : 'Portfolio',
-    url: url.replace(/^www\./, 'https://www.')
-  }))
+  const hostLabelMap: Array<[RegExp, string]> = [
+    [/\blinkedin\b/i, 'LinkedIn'],
+    [/\bgithub\b/i, 'GitHub'],
+    [/\bmedium\b/i, 'Medium'],
+    [/\btwitter\b/i, 'Twitter'],
+    [/\bx\.com\b/i, 'Twitter'],
+    [/\binstagram\b/i, 'Instagram'],
+    [/\bfacebook\b/i, 'Facebook'],
+    [/\byoutube\b/i, 'YouTube'],
+    [/\bdribbble\b/i, 'Dribbble'],
+    [/\bbehance\b/i, 'Behance'],
+    [/\bstackoverflow\b/i, 'Stack Overflow'],
+    [/\bdev\.to\b/i, 'DEV'],
+    [/\bhashnode\b/i, 'Hashnode'],
+    [/\bsubstack\b/i, 'Substack'],
+  ]
+  function plainTextLinkLabel(url: string): string {
+    try {
+      const hostname = new URL(url).hostname
+      for (const [pattern, label] of hostLabelMap) {
+        if (pattern.test(hostname)) return label
+      }
+      const parts = hostname.replace(/^www\./, '').split('.')
+      const name = parts[0] || hostname
+      return name.charAt(0).toUpperCase() + name.slice(1)
+    } catch {
+      return 'Portfolio'
+    }
+  }
+
+  const rawUrls = allText.match(new RegExp(urlPattern.source, 'gi')) || []
+  const seenUrls = new Set<string>()
+  const parsedLinks: Array<{ id: string; label: string; url: string }> = []
+  for (const raw of rawUrls) {
+    // Strip trailing punctuation before normalising
+    const stripped = raw.replace(/[.,;:!?)>\]]+$/, '')
+    const withScheme = stripped.startsWith('www.') ? 'https://' + stripped : stripped
+    try {
+      const parsed = new URL(withScheme)
+      if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) continue
+      const normalized = parsed.href.toLowerCase().replace(/\/+$/, '')
+      if (seenUrls.has(normalized)) continue
+      seenUrls.add(normalized)
+      parsedLinks.push({ id: createResumeItemId(), label: plainTextLinkLabel(parsed.href), url: parsed.href })
+    } catch {
+      // skip unparseable URLs
+    }
+  }
+  document.links = parsedLinks.slice(0, 30)
 
   if (!document.basics.fullName) warnings.push('We could not confidently identify your name.')
   if (!sections.size) warnings.push('No standard section headings were detected; review all imported fields.')

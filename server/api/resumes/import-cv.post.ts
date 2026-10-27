@@ -1,8 +1,10 @@
-import { extractText, getDocumentProxy } from 'unpdf'
+import { getDocumentProxy } from 'unpdf'
+import { extractResumePdf, mergeResumeLinks } from '../../utils/extractResumePdf'
 import { parseResumeText } from '../../utils/resumeParser'
 import { getBillingStatus, resumeBillingEnabled } from '../../utils/billing'
 import { requireResumeBetaUser } from '../../utils/resumeAuth'
 import { parseResumeWithCache } from '../../utils/resumeParseCache'
+import { createResumeItemId } from '../../../shared/utils/resume'
 
 const MAX_CV_SIZE = 10 * 1024 * 1024
 const MAX_PAGES = 20
@@ -38,14 +40,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 413, statusMessage: 'CV must be 10 MB or smaller' })
   }
   bytes = new Uint8Array(uploadedFile.data)
-
+  console.log("basic",basicMode)
   try {
+    // getDocumentProxy transfers bytes.buffer into the PDF.js worker, detaching
+    // the original buffer. We open the proxy once here and pass it everywhere.
     const pdf = await getDocumentProxy(bytes)
     if (pdf.numPages > MAX_PAGES) {
       throw createError({ statusCode: 413, statusMessage: `CV must be ${MAX_PAGES} pages or fewer` })
     }
-    const result = await extractText(pdf, { mergePages: true })
-    const text = result.text.trim()
+
+    // Extract page text AND link annotations using the already-opened proxy.
+    // Annotation links carry the visible label and a validated destination URL.
+    const extracted = await extractResumePdf(pdf)
+    const text = extracted.text
     if (text.length < 40) {
       throw createError({ statusCode: 422, statusMessage: 'This PDF has no usable selectable text. Scanned PDFs are not supported yet.' })
     }
@@ -65,8 +72,31 @@ export default defineEventHandler(async (event) => {
           apiKey: config.GEMINI_API_KEY,
           model: config.geminiModel,
           userId: user.id,
-          fallbackEmail: user.email || ''
+          fallbackEmail: user.email || '',
+          // Fingerprint of annotation URLs: two PDFs with identical text but
+          // different embedded links must produce separate cache entries.
+          annotationLinkFingerprint: extracted.links
+            .filter(l => l.source === 'pdf-annotation')
+            .map(l => l.url)
+            .sort()
+            .join('\n')
         })
+
+    // Merge annotation-derived links into the parsed document.
+    // Annotation links take priority over whatever the parser guessed.
+    // This runs on both the AI and legacy parser paths, including cache hits.
+    const annotationLinks = extracted.links.filter(l => l.source === 'pdf-annotation')
+    const merged = mergeResumeLinks(annotationLinks, parsed.document.links.map(l => ({
+      label: l.label,
+      url: l.url,
+      pageNumber: 0,
+      source: 'visible-text' as const
+    })))
+    parsed.document.links = merged.map(l => ({
+      id: createResumeItemId(),
+      label: l.label,
+      url: l.url
+    }))
 
     return {
       status: 'ready' as const,

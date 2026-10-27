@@ -8,7 +8,27 @@ type JobRecord = {
   application_id?: string
   applied_at?: string
   tracked_at?: string
+  status?: string
   [key: string]: any
+}
+
+export type ApplicationStatus =
+  | 'applied'
+  | 'assessment'
+  | 'interview_1'
+  | 'interview_2'
+  | 'interview_3'
+  | 'offer'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn'
+  | 'declined_offer'
+  | 'on_hold'
+
+export type AppliedJobsQuery = {
+  sortBy?: 'applied_at' | 'company_name' | 'role' | 'status'
+  sortOrder?: 'asc' | 'desc'
+  status?: ApplicationStatus
 }
 
 type JobState = {
@@ -27,6 +47,7 @@ type JobState = {
   loadingAppliedJobs: boolean
   applyingJobIds: string[]
   removingAppliedJobIds: string[]
+  updatingApplicationStatusIds: string[]
 }
 
 type JobReference = string | JobRecord | undefined
@@ -64,7 +85,8 @@ export const useJobStore = defineStore('job', {
     loadingAppliedJobIds: false,
     loadingAppliedJobs: false,
     applyingJobIds: [],
-    removingAppliedJobIds: []
+    removingAppliedJobIds: [],
+    updatingApplicationStatusIds: []
   }),
   getters: {
     isJobSaved: (state) => {
@@ -81,6 +103,9 @@ export const useJobStore = defineStore('job', {
     },
     isRemovingAppliedJob: (state) => {
       return (jobId?: string) => !!jobId && state.removingAppliedJobIds.includes(jobId)
+    },
+    isUpdatingApplicationStatus: (state) => {
+      return (jobId?: string) => !!jobId && state.updatingApplicationStatusIds.includes(jobId)
     }
   },
   actions: {
@@ -104,6 +129,7 @@ export const useJobStore = defineStore('job', {
       this.appliedJobsTotal = 0
       this.applyingJobIds = []
       this.removingAppliedJobIds = []
+      this.updatingApplicationStatusIds = []
       this.loadingAppliedJobIds = false
       this.loadingAppliedJobs = false
     },
@@ -315,7 +341,7 @@ export const useJobStore = defineStore('job', {
         this.loadingAppliedJobIds = false
       }
     },
-    async fetchAppliedJobs(page = 1, itemsPerPage = 10) {
+    async fetchAppliedJobs(page = 1, itemsPerPage = 10, options: AppliedJobsQuery = {}) {
       this.loadingAppliedJobs = true
 
       try {
@@ -329,12 +355,18 @@ export const useJobStore = defineStore('job', {
         const { $supabase } = useNuxtApp()
         const from = (page - 1) * itemsPerPage
         const to = from + itemsPerPage - 1
-        const { data, error, count } = await $supabase
+        const sortBy = options.sortBy || 'applied_at'
+        const sortOrder = options.sortOrder || 'desc'
+        let query = $supabase
           .schema('jobs')
           .from('applications_with_job_info')
           .select('*', { count: 'exact' })
           .eq('user_id', user.id)
-          .order('applied_at', { ascending: false })
+        if (options.status) {
+          query = query.eq('status', options.status)
+        }
+        const { data, error, count } = await query
+          .order(sortBy, { ascending: sortOrder === 'asc' })
           .range(from, to)
 
         if (error) throw error
@@ -456,6 +488,66 @@ export const useJobStore = defineStore('job', {
         return false
       } finally {
         this.removingAppliedJobIds = this.removingAppliedJobIds.filter((id) => id !== jobId)
+      }
+    },
+    async updateAppliedJobStatus(jobId: string | undefined, status: ApplicationStatus) {
+      if (!jobId || this.isUpdatingApplicationStatus(jobId)) return false
+
+      const toast = useToast()
+      this.updatingApplicationStatusIds.push(jobId)
+
+      try {
+        const user = await this.getCurrentUser()
+
+        if (!user) {
+          toast.add({
+            title: 'Sign in to update application status',
+            description: 'Application statuses are saved to your account.',
+            icon: 'i-lucide-lock',
+            color: 'warning'
+          })
+          return false
+        }
+
+        const { $supabase } = useNuxtApp()
+        const { data, error } = await $supabase
+          .schema('jobs')
+          .from('applications')
+          .update({ status })
+          .eq('user_id', user.id)
+          .eq('job_id', jobId)
+          .select('job_id')
+          .maybeSingle()
+
+        if (error) throw error
+        if (!data) throw new Error('Application not found or you do not have permission to update it.')
+
+        this.appliedJobs = this.appliedJobs.map((application) =>
+          application.id === jobId ? { ...application, status } : application
+        )
+
+        if (this.selectedJob?.id === jobId) {
+          this.selectedJob = { ...this.selectedJob, status }
+        }
+
+        toast.add({
+          title: 'Application status updated',
+          icon: 'i-lucide-circle-check',
+          color: 'success'
+        })
+
+        return true
+      } catch (error: any) {
+        toast.add({
+          title: 'Could not update application status',
+          description: error.message || 'Please try again.',
+          icon: 'i-lucide-circle-x',
+          color: 'error'
+        })
+
+        return false
+      } finally {
+        this.updatingApplicationStatusIds = this.updatingApplicationStatusIds.filter((id) => id !== jobId)
       }
     }
   },

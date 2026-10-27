@@ -138,8 +138,8 @@ function validExtraction() {
       { sourceText: 'English\nProfessional', name: 'English', proficiency: 'Professional' }
     ],
     links: [
-      { sourceText: 'https://linkedin.com/in/marta', url: 'https://linkedin.com/in/marta' },
-      { sourceText: 'https://github.com/marta', url: 'https://github.com/marta' }
+      { sourceText: 'https://linkedin.com/in/marta', label: 'LinkedIn', url: 'https://linkedin.com/in/marta' },
+      { sourceText: 'https://github.com/marta', label: 'GitHub', url: 'https://github.com/marta' }
     ]
   }
 }
@@ -328,4 +328,50 @@ describe('Gemini resume parser', () => {
     excessive.certifications = Array.from({ length: 31 }, () => excessive.certifications[0])
     expect(aiResumeExtractionSchema.safeParse(excessive).success).toBe(false)
   })
+
+  it('rejects link records that are missing the label field', () => {
+    const invalid: any = validExtraction()
+    invalid.links = [{ sourceText: 'https://example.com', url: 'https://example.com' }]
+    expect(aiResumeExtractionSchema.safeParse(invalid).success).toBe(false)
+  })
+
+  it('preserves visible labels including Medium, LinkedIn, and custom labels', async () => {
+    const text = `${resumeText}\nhttps://medium.com/@marta`
+    const extraction = validExtraction()
+    extraction.links = [
+      { sourceText: 'https://linkedin.com/in/marta', label: 'LinkedIn', url: 'https://linkedin.com/in/marta' },
+      { sourceText: 'https://github.com/marta', label: 'GitHub', url: 'https://github.com/marta' },
+      { sourceText: 'https://medium.com/@marta', label: 'Medium', url: 'https://medium.com/@marta' }
+    ]
+
+    const result = await parseResumeWithAiFallback(text, {
+      userId: 'user-labels',
+      generateContent: generatorFor(extraction)
+    })
+
+    expect(result.parser).toBe('gemini')
+    const labels = result.document.links.map(l => l.label)
+    expect(labels).toContain('LinkedIn')
+    expect(labels).toContain('GitHub')
+    expect(labels).toContain('Medium')
+    // Medium must not be relabelled as Portfolio
+    expect(labels.filter(l => l === 'Portfolio')).toHaveLength(0)
+  })
+
+  it('falls back to host-based label when AI returns an empty label', async () => {
+    const extraction = validExtraction()
+    extraction.links = [
+      { sourceText: 'https://medium.com/@marta', label: '', url: 'https://medium.com/@marta' }
+    ]
+
+    const result = await parseResumeWithAiFallback(resumeText + '\nhttps://medium.com/@marta', {
+      userId: 'user-empty-label',
+      generateContent: generatorFor(extraction)
+    })
+
+    expect(result.parser).toBe('gemini')
+    const mediumLink = result.document.links.find(l => l.url.includes('medium.com'))
+    expect(mediumLink?.label).toBe('Medium')
+  })
 })
+
