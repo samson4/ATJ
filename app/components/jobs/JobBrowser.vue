@@ -288,6 +288,7 @@ const cancelDateFilter = async () => {
   <UPageHero
     class="hidden md:block"
     :title="page?.title"
+    :description="page?.description"
     :links="heroLinks"
   />
     <div

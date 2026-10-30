@@ -30,8 +30,14 @@ useSeoMeta({
         <p>
           These Terms of Service govern your access to and use of Addis Tech Jobs,
           including our website, job discovery tools, candidate profile features,
-          saved jobs, application tracking, company pages, and related services.
-          By using the platform, you agree to these terms.
+          saved jobs, application tracking, company pages, recruiting services, and
+          related offerings. By using the platform, you agree to these terms.
+        </p>
+        <p>
+          Addis Tech Jobs operates both as a technology job discovery platform for
+          candidates and as a staffing and recruiting partner for employers. For
+          employers, our recruiting services may include targeted sourcing, screening,
+          interviewing, and shortlisting as part of an end-to-end hiring process.
         </p>
       </section>
 
@@ -152,12 +158,20 @@ useSeoMeta({
 
       <section class="space-y-3">
         <h2 class="text-2xl font-semibold text-highlighted">
-          Employers and Recruiters
+          Employers and Recruiting Services
         </h2>
         <p>
           Employers and recruiters are responsible for ensuring that job posts,
           company information, hiring communications, and application processes are
           accurate, lawful, non-discriminatory, and respectful of candidate privacy.
+        </p>
+        <p>
+          When you engage Addis Tech Jobs for recruiting support, we may handle
+          targeted sourcing, screening, interviewing, and shortlisting on your behalf
+          as part of the hiring process. Specific scope, timelines, fees, and delivery
+          terms for those services are set out in a separate agreement or statement of
+          work with your organization. Platform access alone does not create an
+          obligation for us to source or place candidates for your roles.
         </p>
       </section>
 
@@ -168,7 +182,9 @@ useSeoMeta({
         <p>
           Addis Tech Jobs does not guarantee interviews, offers, employment,
           candidate availability, salary outcomes, or hiring results. The platform is
-          a discovery and recruiting support tool.
+          a discovery and recruiting support tool. Where we provide recruiting
+          services, we work to present qualified shortlists, but final hiring decisions
+          remain with the employer.
         </p>
       </section>
 

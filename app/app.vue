@@ -17,8 +17,8 @@ useHead({
   }
 })
 
-const title = 'Addis Tech Jobs | Trusted tech staffing and recruiting partner.'
-const description = 'Trusted staffing and recruiting partner exclusively for tech industries through top-tier talent acquisition.'
+const title = 'Addis Tech Jobs | Tech Jobs in Addis Ababa'
+const description = 'Find tech jobs in Addis Ababa and across Ethiopia. Browse software, data, product, design, DevOps, and IT openings on Addis Tech Jobs.'
 
 useSeoMeta({
   title,

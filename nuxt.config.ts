@@ -67,11 +67,13 @@ export default defineNuxtConfig({
     resumeBillingEnabled: process.env.RESUME_BILLING_ENABLED || 'false',
     resumeBuilderBetaEmails: process.env.NUXT_RESUME_BUILDER_BETA_EMAILS || '',
     geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    contactFromEmail: process.env.CONTACT_FROM_EMAIL || 'Addis Tech Jobs <onboarding@resend.dev>',
     public: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
       FRONTEND_REDIRECT_URL: process.env.FRONTEND_REDIRECT_URL,
-      CONTACT_EMAIL: process.env.NUXT_PUBLIC_CONTACT_EMAIL
+      CONTACT_EMAIL: process.env.NUXT_PUBLIC_CONTACT_EMAIL || 'hello@addistechjobs.work'
     }
   },
   nitro: {

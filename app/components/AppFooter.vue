@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const year = new Date().getFullYear()
 const linkedinUrl = 'https://et.linkedin.com/company/addis-tech-jobs'
+const telegramUrl = 'https://t.me/addistechjobs'
 const { public: { CONTACT_EMAIL } } = useRuntimeConfig()
 
 // const exploreLinks = [
@@ -81,20 +82,34 @@ const legalLinks = [
 
         <div class="space-y-3">
           <h2 class="text-sm font-semibold text-highlighted">
-            Social
+            Socials
           </h2>
-          <UButton
-            :to="linkedinUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            external
-            icon="i-lucide-linkedin"
-            color="neutral"
-            variant="outline"
-            aria-label="Open Addis Tech Jobs on LinkedIn"
-          >
-            LinkedIn
-          </UButton>
+          <div class="flex flex-col gap-2">
+            <UButton
+              :to="linkedinUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              external
+              icon="i-lucide-linkedin"
+              color="neutral"
+              variant="outline"
+              aria-label="Open Addis Tech Jobs on LinkedIn"
+            >
+              LinkedIn
+            </UButton>
+            <UButton
+              :to="telegramUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              external
+              icon="i-simple-icons-telegram"
+              color="neutral"
+              variant="outline"
+              aria-label="Open Addis Tech Jobs on Telegram"
+            >
+              Telegram
+            </UButton>
+          </div>
         </div>
       </div>
     </UContainer>
